@@ -1,0 +1,42 @@
+product_name: "Groww"
+package_id: "com.nextbillion.groww"
+play_store_url: "https://play.google.com/store/apps/details?id=com.nextbillion.groww&hl=en_IN"
+
+windows:
+  corpus_weeks: 12
+  reporting_days: 7
+  min_week_reviews: 15          # below this, roll up to 4 weeks
+  fallback_days: 28
+
+themes:
+  max_total: 5                  # hard cap from the problem statement
+  highlight: 3
+  # Groww-oriented seeds (stocks / MF / F&O broker). Rename if needed.
+  # 5 seeds fill max_total; `other` can only appear by displacing a seed.
+  seeds:
+    - { id: onboarding, label: "Onboarding & demat" }
+    - { id: kyc, label: "KYC & verification" }
+    - { id: payments, label: "Payments & UPI" }
+    - { id: trading, label: "Trading & orders" }
+    - { id: withdrawals, label: "Withdrawals & payouts" }
+
+note:
+  max_words: 250
+  quote_count: 3
+  action_count: 3
+  quote_min_chars: 40
+  quote_max_chars: 200
+
+delivery:
+  recipient: "himabindu.avalur@gmail.com"
+  doc_title: "Weekly Review Pulse — Groww — {week_ending}"
+  email_subject: "Weekly Review Pulse — Groww — {week_ending}"
+  email_body_mode: "full_note_plus_link"   # full_note_plus_link | link_only
+
+limits:
+  # Smaller batches stay under Groq free-tier ~8K tokens/minute
+  cluster_batch_size: 10
+  cluster_max_attempts: 2
+  generate_max_attempts: 3
+  # ~30 requests/minute → 2.5s gap between LLM calls
+  llm_request_interval_seconds: 2.5

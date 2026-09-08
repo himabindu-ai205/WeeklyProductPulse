@@ -1,0 +1,35 @@
+# Secrets and local env
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Pipeline data (keep directory structure via .gitkeep where needed)
+data/exports/*
+!data/exports/.gitkeep
+!data/exports/README.md
+data/artifacts/*
+!data/artifacts/.gitkeep
+data/raw/*
+!data/raw/.gitkeep
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Local dashboard runtime
+frontend/node_modules/

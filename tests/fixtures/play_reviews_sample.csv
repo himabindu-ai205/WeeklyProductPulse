@@ -1,0 +1,42 @@
+Review Submit Date and Time,Star Rating,Review Title,Review Text,App Version Name,Reviewer Language,Reviewer Name,Device
+2026-08-30 10:00:00,1,Payments issue,"Money left my account but the app says payment failed, third time this month.",3.3.0,en,Reviewer0,device-0000
+2026-08-28 10:00:00,2,Kyc issue,KYC rejected my passport photo without saying which field failed.,3.4.1,en,Reviewer1,device-0001
+2026-08-26 10:00:00,3,Onboarding issue,New user flow crashed when I skipped optional address fields.,3.5.2,en,Reviewer2,device-0002
+2026-08-24 10:00:00,4,Statements issue,CSV statement export truncates merchant names.,3.3.3,en,Reviewer3,device-0003
+2026-08-22 10:00:00,5,Withdrawals issue,Withdrawal pending for three days with no status update.,3.4.4,en,Reviewer4,device-0004
+2026-08-20 10:00:00,1,Payments issue,"Money left my account but the app says payment failed, third time this month.",3.5.5,en,Reviewer5,device-0005
+2026-08-18 10:00:00,2,Kyc issue,Verification loop never ends after document upload.,3.3.6,en,Reviewer6,device-0006
+2026-08-16 10:00:00,3,Onboarding issue,Welcome tour blocked me from reaching the home screen.,3.4.7,en,Reviewer7,device-0007
+2026-08-14 10:00:00,4,Statements issue,Monthly statement PDF is blank for the last billing cycle.,3.5.8,en,Reviewer8,device-0008
+2026-08-12 10:00:00,5,Withdrawals issue,Bank transfer out failed silently after I confirmed.,3.3.9,en,Reviewer9,device-0009
+2026-08-10 10:00:00,1,Payments issue,"Money left my account but the app says payment failed, third time this month.",3.4.0,en,Reviewer10,device-0010
+2026-08-08 10:00:00,2,Kyc issue,Selfie match fails even with good lighting and clear ID.,3.5.1,en,Reviewer11,device-0011
+2026-08-06 10:00:00,3,Onboarding issue,Signup was easy but the OTP took almost five minutes to arrive.,3.3.2,en,Reviewer12,device-0012
+2026-08-04 10:00:00,4,Statements issue,Cannot download statement for March; button does nothing.,3.4.3,en,Reviewer13,device-0013
+2026-08-02 10:00:00,5,Withdrawals issue,Withdrawal fee not shown until the last confirmation step.,3.5.4,en,Reviewer14,device-0014
+2026-07-31 10:00:00,1,Payments issue,"Money left my account but the app says payment failed, third time this month.",3.3.5,en,Reviewer15,device-0015
+2026-07-29 10:00:00,2,Kyc issue,"Uploaded my ID four times and it keeps saying invalid, no explanation at all.",3.4.6,en,Reviewer16,device-0016
+2026-07-27 10:00:00,3,Onboarding issue,Onboarding asks for the same details twice after restart.,3.5.7,en,Reviewer17,device-0017
+2026-07-25 10:00:00,4,Statements issue,Statement amounts do not match the transaction list.,3.3.8,en,Reviewer18,device-0018
+2026-07-23 10:00:00,5,Withdrawals issue,Cannot cancel a stuck withdrawal request.,3.4.9,en,Reviewer19,device-0019
+2026-07-21 10:00:00,1,Payments issue,"Money left my account but the app says payment failed, third time this month. (note 20)",3.5.0,en,Reviewer20,device-0020
+2026-07-19 10:00:00,2,Kyc issue,KYC rejected my passport photo without saying which field failed. (note 21),3.3.1,en,Reviewer21,device-0021
+2026-07-17 10:00:00,3,Onboarding issue,New user flow crashed when I skipped optional address fields. (note 22),3.4.2,en,Reviewer22,device-0022
+2026-07-15 10:00:00,4,Statements issue,CSV statement export truncates merchant names. (note 23),3.5.3,en,Reviewer23,device-0023
+2026-07-13 10:00:00,5,Withdrawals issue,Withdrawal pending for three days with no status update. (note 24),3.3.4,en,Reviewer24,device-0024
+2026-07-11 10:00:00,1,Payments issue,"Money left my account but the app says payment failed, third time this month. (note 25)",3.4.5,en,Reviewer25,device-0025
+2026-07-09 10:00:00,2,Kyc issue,Verification loop never ends after document upload. (note 26),3.5.6,en,Reviewer26,device-0026
+2026-07-07 10:00:00,3,Onboarding issue,Welcome tour blocked me from reaching the home screen. (note 27),3.3.7,en,Reviewer27,device-0027
+2026-07-05 10:00:00,4,Statements issue,Monthly statement PDF is blank for the last billing cycle. (note 28),3.4.8,en,Reviewer28,device-0028
+2026-07-03 10:00:00,5,Withdrawals issue,Bank transfer out failed silently after I confirmed. (note 29),3.5.9,en,Reviewer29,device-0029
+2026-07-01 10:00:00,1,Payments issue,"Money left my account but the app says payment failed, third time this month. (note 30)",3.3.0,en,Reviewer30,device-0030
+2026-06-29 10:00:00,2,Kyc issue,Selfie match fails even with good lighting and clear ID. (note 31),3.4.1,en,Reviewer31,device-0031
+2026-06-27 10:00:00,3,Onboarding issue,Signup was easy but the OTP took almost five minutes to arrive. (note 32),3.5.2,en,Reviewer32,device-0032
+2026-06-25 10:00:00,4,Statements issue,Cannot download statement for March; button does nothing. (note 33),3.3.3,en,Reviewer33,device-0033
+2026-06-23 10:00:00,5,Withdrawals issue,Withdrawal fee not shown until the last confirmation step. (note 34),3.4.4,en,Reviewer34,device-0034
+2026-08-28 14:30:00,1,Contact me,Reach me at user@example.com about my failed payment of INR 500.,3.4.1,en,Alice Reviewer,device-pii
+2026-08-25 14:30:00,2,Call support,Please call +91 98765 43210 regarding KYC today.,3.4.0,en,Bob Smith,device-pii
+2026-08-22 14:30:00,3,Social,Follow up via @angryuser on this payments bug.,3.3.9,en,Carol,device-pii
+2026-08-20 14:30:00,1,Profile link,Details at https://example.com/u/jane and device ABCDEF123456 for my account.,3.3.8,en,Jane Doe,device-pii
+2026-08-18 14:30:00,2,Signed off,App froze during onboarding again. - Firstname L.,3.3.7,en,Firstname L,device-pii
+2026-05-24 09:00:00,5,Old praise,Loved the app last year when onboarding was simpler.,2.0.0,en,OldUser,device-old
