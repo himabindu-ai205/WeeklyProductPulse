@@ -252,9 +252,8 @@ def _assemble_pulse(
 def write_generate_artifacts(
     pulse: Pulse, md: str, artifacts_dir: Path
 ) -> None:
-    """Write pulse.json and pulse.md to the artifacts directory."""
+    """Write pulse.json / pulse.md and archive under history/<week_ending>/."""
+    from .archive import archive_pulse
+
     artifacts_dir.mkdir(parents=True, exist_ok=True)
-    (artifacts_dir / "pulse.json").write_text(
-        json.dumps(pulse.model_dump(mode="json"), indent=2), encoding="utf-8"
-    )
-    (artifacts_dir / "pulse.md").write_text(md, encoding="utf-8")
+    archive_pulse(pulse, md, artifacts_dir, update_latest=True)

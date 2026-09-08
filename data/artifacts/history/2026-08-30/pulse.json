@@ -1,0 +1,86 @@
+{
+  "product_name": "Groww",
+  "week_ending": "2026-08-30",
+  "corpus_window": {
+    "from_": "2026-06-07",
+    "to": "2026-08-30"
+  },
+  "reporting_window": {
+    "from_": "2026-08-24",
+    "to": "2026-08-30"
+  },
+  "window_note": null,
+  "review_count_week": 137,
+  "review_count_corpus": 137,
+  "avg_rating_week": 3.13,
+  "store": "play_store",
+  "top_themes": [
+    {
+      "id": "trading",
+      "label": "Trading & orders",
+      "count_week": 70,
+      "avg_rating_week": 2.97,
+      "trend": "rising",
+      "summary": "Users report technical glitches during order execution, high brokerage fees, and missing features like pre‑market sell and chart tools."
+    },
+    {
+      "id": "onboarding",
+      "label": "Onboarding & demat",
+      "count_week": 8,
+      "avg_rating_week": 3.88,
+      "trend": "rising",
+      "summary": "New investors appreciate the app’s ease, yet demat account opening delays and unresponsive support cause significant frustration."
+    },
+    {
+      "id": "withdrawals",
+      "label": "Withdrawals & payouts",
+      "count_week": 5,
+      "avg_rating_week": 1.4,
+      "trend": "rising",
+      "summary": "Withdrawal attempts often lack SMS or UPI confirmations, leaving users uncertain whether the transaction succeeded."
+    }
+  ],
+  "quotes": [
+    {
+      "text": "Main purchasing or selling time always has their technical issues. Disgusting...",
+      "review_id": "c3c7111be7ee",
+      "theme_id": "trading",
+      "rating": 3,
+      "date": "2026-08-30"
+    },
+    {
+      "text": "I have applied for a demat account opening on 12th August but till date it is not opened. Every time customer care gives a new date for resolution. Not happy with the service.",
+      "review_id": "ee678482199c",
+      "theme_id": "onboarding",
+      "rating": 1,
+      "date": "2026-08-28"
+    },
+    {
+      "text": "there is a problem i am not getting any message as sms or in upi when I withdraw the money please fix it immediately.",
+      "review_id": "eda4bb38c495",
+      "theme_id": "withdrawals",
+      "rating": 3,
+      "date": "2026-08-28"
+    }
+  ],
+  "actions": [
+    {
+      "title": "Add Pre‑Market Sell Feature",
+      "detail": "Implement pre‑market sell for SME IPOs and improve chart UI to prevent full‑screen glitches.",
+      "theme_id": "trading"
+    },
+    {
+      "title": "Accelerate Demat Account Opening",
+      "detail": "Streamline KYC workflow and set clear timelines, with automated status updates to reduce support delays.",
+      "theme_id": "onboarding"
+    },
+    {
+      "title": "Enable Withdrawal Confirmation Alerts",
+      "detail": "Send immediate SMS and in‑app UPI notifications for every withdrawal request to assure users of processing.",
+      "theme_id": "withdrawals"
+    }
+  ],
+  "body_word_count": 176,
+  "doc_url": null,
+  "draft_id": null
+}

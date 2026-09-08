@@ -6,21 +6,45 @@ import argparse
 import json
 import shutil
 import sys
+from datetime import date
 from pathlib import Path
 
-from .agent.runner import orchestration_status_block, run_generate_validate
-from .cluster import cluster_reviews, write_cluster_artifacts
 from .config import load_settings
-from .ingest import EmptyCorpusError, IngestError, ingest_paths, ingest_exports_dir
-from .llm import create_chat_model
-from .publish import (
-    PublishError,
-    publish_pulse,
-    update_pulse_artifact_with_publish,
-)
-from .redact import redact_from_artifacts
-from .schedule import week_already_published
-from .theme_math import top_n_themes
+from .archive import parse_week_ending
+
+
+def _import_pipeline():
+    """Lazy-import LLM/pipeline deps so ``--serve`` works with slim Railway deps."""
+    from .agent.runner import orchestration_status_block, run_generate_validate
+    from .cluster import cluster_reviews, write_cluster_artifacts
+    from .ingest import EmptyCorpusError, IngestError, ingest_paths, ingest_exports_dir
+    from .llm import create_chat_model
+    from .publish import (
+        PublishError,
+        publish_pulse,
+        update_pulse_artifact_with_publish,
+    )
+    from .redact import redact_from_artifacts
+    from .schedule import week_already_published
+    from .theme_math import top_n_themes
+
+    return {
+        "orchestration_status_block": orchestration_status_block,
+        "run_generate_validate": run_generate_validate,
+        "cluster_reviews": cluster_reviews,
+        "write_cluster_artifacts": write_cluster_artifacts,
+        "EmptyCorpusError": EmptyCorpusError,
+        "IngestError": IngestError,
+        "ingest_paths": ingest_paths,
+        "ingest_exports_dir": ingest_exports_dir,
+        "create_chat_model": create_chat_model,
+        "PublishError": PublishError,
+        "publish_pulse": publish_pulse,
+        "update_pulse_artifact_with_publish": update_pulse_artifact_with_publish,
+        "redact_from_artifacts": redact_from_artifacts,
+        "week_already_published": week_already_published,
+        "top_n_themes": top_n_themes,
+    }
 
 
 def _print_config() -> int:
@@ -92,20 +116,43 @@ def _run_pipeline(
     skip_llm: bool,
     skip_publish: bool,
     once_per_week: bool = False,
+    week_ending_override: date | None = None,
 ) -> int:
+    deps = _import_pipeline()
+    EmptyCorpusError = deps["EmptyCorpusError"]
+    IngestError = deps["IngestError"]
+    ingest_paths = deps["ingest_paths"]
+    ingest_exports_dir = deps["ingest_exports_dir"]
+    redact_from_artifacts = deps["redact_from_artifacts"]
+    create_chat_model = deps["create_chat_model"]
+    cluster_reviews = deps["cluster_reviews"]
+    write_cluster_artifacts = deps["write_cluster_artifacts"]
+    top_n_themes = deps["top_n_themes"]
+    run_generate_validate = deps["run_generate_validate"]
+    orchestration_status_block = deps["orchestration_status_block"]
+    week_already_published = deps["week_already_published"]
+    publish_pulse = deps["publish_pulse"]
+    update_pulse_artifact_with_publish = deps["update_pulse_artifact_with_publish"]
+    PublishError = deps["PublishError"]
+
     settings = load_settings()
     artifacts = settings.root / "data" / "artifacts"
     try:
         if paths:
             ingest_result = ingest_paths(
-                [Path(p) for p in paths],
+                [Path(path) for path in paths],
                 settings.app,
+                week_ending_override=week_ending_override,
                 artifacts_dir=artifacts,
                 write_artifacts=True,
             )
         else:
             _ensure_exports(settings)
-            ingest_result = ingest_exports_dir(settings, write_artifacts=True)
+            ingest_result = ingest_exports_dir(
+                settings,
+                write_artifacts=True,
+                week_ending_override=week_ending_override,
+            )
 
         print(
             f"[ingest] kept {ingest_result.report.rows_kept} "
@@ -319,12 +366,23 @@ def main(argv: list[str] | None = None) -> int:
         help="Skip Docs/Gmail if this week_ending is already in doc_registry",
     )
     parser.add_argument(
+        "--week-ending",
+        default=None,
+        metavar="YYYY-MM-DD",
+        help="Override reporting week end (for regenerating a past week into history)",
+    )
+    parser.add_argument(
         "--serve",
         action="store_true",
         help="Serve the local Stitch dashboard (http://127.0.0.1:8080/)",
     )
-    parser.add_argument("--host", default="127.0.0.1", help="Dashboard bind host")
-    parser.add_argument("--port", type=int, default=8080, help="Dashboard bind port")
+    parser.add_argument(
+        "--backend-only",
+        action="store_true",
+        help="With --serve: JSON API only (no static frontend)",
+    )
+    parser.add_argument("--host", default=None, help="Dashboard bind host")
+    parser.add_argument("--port", type=int, default=None, help="Dashboard bind port")
     parser.add_argument(
         "exports",
         nargs="*",
@@ -337,12 +395,21 @@ def main(argv: list[str] | None = None) -> int:
     if args.serve:
         from .web import serve
 
-        return serve(host=args.host, port=args.port)
+        return serve(host=args.host, port=args.port, backend_only=args.backend_only)
+
+    week_override: date | None = None
+    if args.week_ending:
+        week_override = parse_week_ending(args.week_ending)
+        if week_override is None:
+            print(f"Invalid --week-ending: {args.week_ending}", file=sys.stderr)
+            return 1
+
     return _run_pipeline(
         args.exports or None,
         skip_llm=args.skip_llm,
         skip_publish=args.skip_publish,
         once_per_week=args.once_per_week,
+        week_ending_override=week_override,
     )
 
 

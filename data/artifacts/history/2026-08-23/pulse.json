@@ -1,0 +1,86 @@
+{
+  "product_name": "Groww",
+  "week_ending": "2026-08-23",
+  "corpus_window": {
+    "from_": "2026-05-31",
+    "to": "2026-08-23"
+  },
+  "reporting_window": {
+    "from_": "2026-08-17",
+    "to": "2026-08-23"
+  },
+  "window_note": null,
+  "review_count_week": 148,
+  "review_count_corpus": 749,
+  "avg_rating_week": 2.95,
+  "store": "play_store",
+  "top_themes": [
+    {
+      "id": "trading",
+      "label": "Trading & orders",
+      "count_week": 65,
+      "avg_rating_week": 3.0,
+      "trend": "rising",
+      "summary": "Users report frequent unwanted notifications and automatic order switches to BSE, causing confusion. Some praise the ease of option selection, but overall experience is mixed."
+    },
+    {
+      "id": "onboarding",
+      "label": "Onboarding & demat",
+      "count_week": 7,
+      "avg_rating_week": 2.14,
+      "trend": "rising",
+      "summary": "New users face app crashes during permission stages, preventing account setup. Positive feedback highlights quick demat account creation for experienced users."
+    },
+    {
+      "id": "payments",
+      "label": "Payments & UPI",
+      "count_week": 3,
+      "avg_rating_week": 2.0,
+      "trend": "rising",
+      "summary": "Users report fraudulent app behavior and difficulty adding funds, raising security concerns. Technical errors persist for some, impacting trust."
+    }
+  ],
+  "quotes": [
+    {
+      "text": "Unwanted notifications. Order sometimes switches to bse automatically. Now showing other unwanted stocks in holdings page.",
+      "review_id": "fd2c555dc80f",
+      "theme_id": "trading",
+      "rating": 3,
+      "date": "2026-08-20"
+    },
+    {
+      "text": "not able to operating app its not getting open after permissions stage keep crashing in loading loop.",
+      "review_id": "4aa965b619da",
+      "theme_id": "onboarding",
+      "rating": 1,
+      "date": "2026-08-23"
+    },
+    {
+      "text": "It's froud aps u can't fund transfer to other bank SBI security is best aps.....",
+      "review_id": "1e317b77a7df",
+      "theme_id": "payments",
+      "rating": 1,
+      "date": "2026-08-21"
+    }
+  ],
+  "actions": [
+    {
+      "title": "Reduce Unwanted Notifications",
+      "detail": "Implement a notification filter to allow users to opt‑in for trade alerts only, and prevent automatic BSE order switches.",
+      "theme_id": "trading"
+    },
+    {
+      "title": "Fix Permission‑Stage Crashes",
+      "detail": "Resolve app crashes during permission prompts by updating the launch sequence and adding robust error handling.",
+      "theme_id": "onboarding"
+    },
+    {
+      "title": "Enhance Fund Transfer Security",
+      "detail": "Introduce two‑factor authentication for adding money and audit the transfer process to eliminate fraud claims.",
+      "theme_id": "payments"
+    }
+  ],
+  "body_word_count": 173,
+  "doc_url": null,
+  "draft_id": null
+}

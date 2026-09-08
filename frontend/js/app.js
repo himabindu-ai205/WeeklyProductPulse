@@ -10,8 +10,15 @@
 
   const state = {
     pulse: null,
-    meta: { product_name: "Groww", email_subject: "Weekly Review Pulse — Groww — {week_ending}" },
+    weeks: [],
+    selectedWeekEnding: null,
+    meta: {
+      product_name: "Groww",
+      email_subject: "Weekly Review Pulse — Groww — {week_ending}",
+      default_recipient: "",
+    },
     error: null,
+    missingWeek: null,
   };
 
   function $(id) {
@@ -144,11 +151,56 @@
             <span class="material-symbols-outlined text-tertiary text-[36px]">description</span>
           </div>
           <h2 class="font-headline-md text-headline-md font-bold text-on-surface mb-space-2xs">No reports yet</h2>
-          <p class="font-body-md text-body-md text-secondary leading-relaxed mb-space-lg max-w-md">Reports generate every Sunday evening. The first pulse will appear here.</p>
+          <p class="font-body-md text-body-md text-secondary leading-relaxed mb-space-lg max-w-md">Reports generate on the weekly schedule. The latest pulse will appear here once the backend has published artifacts.</p>
           <div class="inline-flex items-center gap-space-xs px-space-md py-1.5 rounded-full bg-surface-container text-on-secondary-container">
             <span class="w-2 h-2 rounded-full bg-primary"></span>
-            <span class="font-label-sm text-label-sm font-semibold tracking-wide uppercase">Run python -m src then refresh</span>
+            <span class="font-label-sm text-label-sm font-semibold tracking-wide uppercase">${
+              ["localhost", "127.0.0.1"].includes(window.location.hostname)
+                ? "Run python -m src then refresh"
+                : "Waiting for backend pulse data"
+            }</span>
           </div>
+        </section>
+      </div>`;
+  }
+
+  function renderMissingWeek(week) {
+    const cmd = `python -m src --week-ending ${week.week_ending} --skip-publish`;
+    const options = (state.weeks || [])
+      .map((w) => {
+        const selected = w.week_ending === week.week_ending ? " selected" : "";
+        const mark = w.available ? "" : " · not generated";
+        return `<option value="${escapeHtml(w.week_ending)}"${selected}>${escapeHtml(w.label)}${mark}</option>`;
+      })
+      .join("");
+    return `
+      <div class="max-w-container-max-width mx-auto px-space-md lg:px-space-lg py-space-xl">
+        <section class="flex flex-col gap-space-xs pb-space-md">
+          <div class="flex items-center gap-space-xs">
+            <span class="font-label-sm text-label-sm text-tertiary uppercase tracking-widest font-bold">Customer Voice · Play Store</span>
+          </div>
+          <h1 class="font-display-title text-display-title italic text-on-surface font-normal">Weekly Review Pulse</h1>
+          <p class="font-body-md text-body-md text-secondary">Select a prior week to view or generate its report.</p>
+        </section>
+        <section class="flex flex-wrap items-center gap-space-sm py-space-sm mb-space-lg bg-surface-container-lowest/60 rounded-xl px-space-md">
+          <label class="font-label-md text-label-md text-tertiary font-semibold uppercase tracking-wider" for="period-select">Period</label>
+          <div class="relative inline-flex items-center">
+            <select id="period-select" class="appearance-none bg-surface-container-low text-on-surface font-headline-sm text-body-md font-semibold py-1.5 pl-3 pr-8 rounded-full focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer" aria-label="Select report week">
+              ${options}
+            </select>
+            <span class="material-symbols-outlined absolute right-2 text-tertiary pointer-events-none text-base">expand_more</span>
+          </div>
+        </section>
+        <section class="w-full bg-surface-container-lowest rounded-xl p-space-xl shadow-sm text-center flex flex-col items-center" id="report">
+          <div class="w-20 h-20 rounded-full bg-surface-container flex items-center justify-center mb-space-lg">
+            <span class="material-symbols-outlined text-tertiary text-[36px]">history</span>
+          </div>
+          <h2 class="font-headline-md text-headline-md font-bold text-on-surface mb-space-2xs">Report not generated</h2>
+          <p class="font-body-md text-body-md text-secondary leading-relaxed mb-space-md max-w-lg">
+            No pulse exists for <strong>${escapeHtml(week.label)}</strong> (week ending ${escapeHtml(formatShort(week.week_ending))}).
+            Generate it locally, then redeploy the backend (or refresh if running locally).
+          </p>
+          <code class="font-body-sm text-body-sm bg-surface-container px-space-md py-space-sm rounded-lg text-on-surface break-all max-w-full">${escapeHtml(cmd)}</code>
         </section>
       </div>`;
   }
@@ -278,7 +330,16 @@
             <label class="font-label-md text-label-md text-tertiary font-semibold uppercase tracking-wider" for="period-select">Period</label>
             <div class="relative inline-flex items-center">
               <select id="period-select" class="appearance-none bg-surface-container-low text-on-surface font-headline-sm text-body-md font-semibold py-1.5 pl-3 pr-8 rounded-full focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer" aria-label="Select report week">
-                <option selected value="${escapeHtml(iso)}">${escapeHtml(range)}</option>
+                ${(state.weeks.length ? state.weeks : [{ week_ending: pulse.week_ending, label: range, available: true }])
+                  .map((w) => {
+                    const selected =
+                      w.week_ending === (state.selectedWeekEnding || pulse.week_ending)
+                        ? " selected"
+                        : "";
+                    const mark = w.available ? "" : " · not generated";
+                    return `<option value="${escapeHtml(w.week_ending)}"${selected}>${escapeHtml(w.label)}${mark}</option>`;
+                  })
+                  .join("")}
               </select>
               <span class="material-symbols-outlined absolute right-2 text-tertiary pointer-events-none text-base">expand_more</span>
             </div>
@@ -370,7 +431,7 @@
               <div class="relative flex-1">
                 <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-tertiary text-base">mail</span>
                 <label class="sr-only" for="email-target">Recipient email</label>
-                <input id="email-target" class="w-full bg-surface-container-lowest text-on-surface font-body-md text-body-md pl-9 pr-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-tertiary" type="email" value="" placeholder="name@company.com" autocomplete="email" required>
+                <input id="email-target" class="w-full bg-surface-container-lowest text-on-surface font-body-md text-body-md pl-9 pr-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-tertiary" type="email" value="${escapeHtml(state.meta.default_recipient || "")}" placeholder="name@company.com" autocomplete="email" required>
               </div>
               <button type="button" id="draft-email-btn" class="inline-flex items-center justify-center gap-2 px-space-lg py-2 rounded-full bg-primary hover:bg-primary-container text-on-primary font-headline-sm text-label-md font-semibold active:scale-[0.98]">
                 <span class="material-symbols-outlined text-base">outgoing_mail</span>
@@ -378,7 +439,7 @@
               </button>
             </div>
             <div class="flex items-center justify-between text-tertiary font-body-sm text-body-sm">
-              <span>Creates a mail draft. Nothing is sent until you send it.</span>
+              <span>Opens Gmail compose (or your mail app). Nothing is sent until you send it.</span>
               <span class="font-label-sm text-label-sm hidden sm:inline">Draft for week ending ${escapeHtml(formatShort(pulse.week_ending))}</span>
             </div>
           </div>
@@ -386,7 +447,29 @@
       </div>`;
   }
 
+  function bindPeriodSelect() {
+    const select = $("period-select");
+    if (!select) return;
+    select.addEventListener("change", () => {
+      const weekEnding = select.value;
+      state.selectedWeekEnding = weekEnding;
+      const params = new URLSearchParams(window.location.search);
+      const slot = (state.weeks || []).find((w) => w.week_ending === weekEnding);
+      if (slot) {
+        params.set("week", slot.iso_week);
+        params.delete("week_ending");
+      } else {
+        params.set("week_ending", weekEnding);
+        params.delete("week");
+      }
+      const qs = params.toString();
+      window.history.replaceState({}, "", qs ? `?${qs}` : window.location.pathname);
+      load(true);
+    });
+  }
+
   function bindBriefing(pulse) {
+    bindPeriodSelect();
     const refreshBtn = $("refresh-btn");
     const refreshIcon = $("refresh-icon");
     if (refreshBtn) {
@@ -429,7 +512,10 @@
     const downloadBtn = $("download-md-btn");
     if (downloadBtn) {
       downloadBtn.addEventListener("click", async () => {
-        const res = await fetch("/api/pulse.md", { cache: "no-store" });
+        const weekQ = state.selectedWeekEnding
+          ? `?week_ending=${encodeURIComponent(state.selectedWeekEnding)}`
+          : "";
+        const res = await fetch(`/api/pulse.md${weekQ}`, { cache: "no-store" });
         if (!res.ok) return;
         const text = await res.text();
         const iso = toIsoWeekString(parseDate(pulse.week_ending));
@@ -446,9 +532,9 @@
     const draftBtn = $("draft-email-btn");
     const emailInput = $("email-target");
     if (draftBtn) {
-      draftBtn.addEventListener("click", () => {
+      draftBtn.addEventListener("click", async () => {
         const to = (emailInput?.value || "").trim();
-        if (!to || !to.includes("@")) {
+        if (!to || !to.includes("@") || !to.includes(".")) {
           emailInput?.focus();
           emailInput?.setCustomValidity("Enter a recipient email address.");
           emailInput?.reportValidity();
@@ -464,8 +550,47 @@
           `Avg rating: ${stars(pulse.avg_rating_week)}★ · ${pulse.review_count_week} reviews\n` +
           `Top themes: ${themes}\n\n` +
           `${shareUrl(pulse)}\n`;
-        window.location.href = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        openModal(`Week ending ${ending} · mail draft for ${to}`);
+
+        // Prefer Gmail compose in a new tab (works without a desktop mail client).
+        const gmail =
+          "https://mail.google.com/mail/?view=cm&fs=1" +
+          `&to=${encodeURIComponent(to)}` +
+          `&su=${encodeURIComponent(subject)}` +
+          `&body=${encodeURIComponent(body)}`;
+        const mailto = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+        let opened = false;
+        try {
+          const win = window.open(gmail, "_blank", "noopener,noreferrer");
+          opened = !!win;
+        } catch {
+          opened = false;
+        }
+        if (!opened) {
+          // Popup blocked or no window — fall back to mailto, then clipboard.
+          try {
+            const a = document.createElement("a");
+            a.href = mailto;
+            a.rel = "noopener";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            opened = true;
+          } catch {
+            opened = false;
+          }
+        }
+        if (!opened) {
+          try {
+            await navigator.clipboard.writeText(`${subject}\n\nTo: ${to}\n\n${body}`);
+            openModal(`Could not open mail. Subject and body copied for ${to}.`);
+            return;
+          } catch {
+            openModal(`Could not open mail for ${to}. Copy the share link and paste into email.`);
+            return;
+          }
+        }
+        openModal(`Week ending ${ending} · compose opened for ${to}`);
       });
     }
   }
@@ -494,8 +619,17 @@
     const footerLine = $("footer-line");
     const footerMeta = $("footer-meta");
 
-    if (state.error && !state.pulse) {
+    if (state.error && !state.pulse && !state.missingWeek) {
       app.innerHTML = renderError(state.error);
+      return;
+    }
+    if (state.missingWeek) {
+      app.innerHTML = renderMissingWeek(state.missingWeek);
+      bindPeriodSelect();
+      if (footerLine) {
+        footerLine.textContent = `Weekly Review Pulse · Groww Customer Voice · week ending ${formatShort(state.missingWeek.week_ending)}`;
+      }
+      if (footerMeta) footerMeta.textContent = "Not generated yet";
       return;
     }
     if (!state.pulse) {
@@ -514,27 +648,75 @@
     if (footerMeta) footerMeta.textContent = `${pulse.review_count_week} reviews analyzed`;
   }
 
+  function selectedWeekQuery() {
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = params.get("week_ending") || params.get("week");
+    if (state.selectedWeekEnding) {
+      return `week_ending=${encodeURIComponent(state.selectedWeekEnding)}`;
+    }
+    if (fromUrl) {
+      if (params.get("week_ending")) {
+        return `week_ending=${encodeURIComponent(params.get("week_ending"))}`;
+      }
+      return `week=${encodeURIComponent(fromUrl)}`;
+    }
+    return "";
+  }
+
   async function load(bust) {
-    const q = bust ? `?_=${Date.now()}` : "";
+    const bustQ = bust ? `_=${Date.now()}` : "";
+    const weekQ = selectedWeekQuery();
+    const parts = [weekQ, bustQ].filter(Boolean);
+    const q = parts.length ? `?${parts.join("&")}` : "";
     try {
-      const [pulseRes, metaRes] = await Promise.all([
+      const [weeksRes, pulseRes, metaRes] = await Promise.all([
+        fetch(`/api/weeks${bust ? `?_=${Date.now()}` : ""}`, { cache: "no-store" }),
         fetch(`/api/pulse${q}`, { cache: "no-store" }),
-        fetch(`/api/meta${q}`, { cache: "no-store" }),
+        fetch(`/api/meta${bust ? `?_=${Date.now()}` : ""}`, { cache: "no-store" }),
       ]);
       if (metaRes.ok) state.meta = await metaRes.json();
+      if (weeksRes.ok) {
+        const payload = await weeksRes.json();
+        state.weeks = payload.weeks || [];
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      if (!state.selectedWeekEnding) {
+        const urlWeek = params.get("week_ending") || params.get("week");
+        if (urlWeek && state.weeks.length) {
+          const match = state.weeks.find(
+            (w) => w.week_ending === urlWeek || w.iso_week.toUpperCase() === urlWeek.toUpperCase()
+          );
+          state.selectedWeekEnding = match ? match.week_ending : state.weeks[0].week_ending;
+        } else if (state.weeks.length) {
+          state.selectedWeekEnding = state.weeks[0].week_ending;
+        }
+      }
+
       if (pulseRes.status === 404) {
         state.pulse = null;
         state.error = null;
+        const slot =
+          (state.weeks || []).find((w) => w.week_ending === state.selectedWeekEnding) ||
+          null;
+        state.missingWeek = slot;
+        if (!state.weeks.length) state.missingWeek = null;
       } else if (!pulseRes.ok) {
         const err = await pulseRes.json().catch(() => ({}));
         state.pulse = null;
+        state.missingWeek = null;
         state.error = err.detail || pulseRes.statusText;
       } else {
         state.pulse = await pulseRes.json();
+        state.missingWeek = null;
         state.error = null;
+        if (state.pulse?.week_ending) {
+          state.selectedWeekEnding = state.pulse.week_ending;
+        }
       }
     } catch (e) {
       state.pulse = null;
+      state.missingWeek = null;
       state.error = e instanceof Error ? e.message : String(e);
     }
     paint();

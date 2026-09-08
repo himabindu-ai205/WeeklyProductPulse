@@ -1,0 +1,86 @@
+{
+  "product_name": "Groww",
+  "week_ending": "2026-08-16",
+  "corpus_window": {
+    "from_": "2026-05-24",
+    "to": "2026-08-16"
+  },
+  "reporting_window": {
+    "from_": "2026-08-10",
+    "to": "2026-08-16"
+  },
+  "window_note": null,
+  "review_count_week": 169,
+  "review_count_corpus": 601,
+  "avg_rating_week": 2.89,
+  "store": "play_store",
+  "top_themes": [
+    {
+      "id": "other",
+      "label": "Other",
+      "count_week": 166,
+      "avg_rating_week": 2.9,
+      "trend": "rising",
+      "summary": "Many users encounter UI issues such as missing cart icons, absent note fields, and app lag, indicating stability and navigation problems in the latest version."
+    },
+    {
+      "id": "trading",
+      "label": "Trading & orders",
+      "count_week": 2,
+      "avg_rating_week": 2.5,
+      "trend": "falling",
+      "summary": "Users request the option chain to display cost per lot, helping them assess pricing more accurately when trading options."
+    },
+    {
+      "id": "payments",
+      "label": "Payments & UPI",
+      "count_week": 1,
+      "avg_rating_week": 1.0,
+      "trend": "rising",
+      "summary": "A user complains that the manual SIP payment method was removed, forcing reliance on auto‑payment and reducing control over transaction timing."
+    }
+  ],
+  "quotes": [
+    {
+      "text": "i have added a few mf in the cart but I don't see the cart icon anywhere. Now, I don't know how to open cart page and proceed with investment. It seems like major UI glitch in new version if the app.",
+      "review_id": "079358b0c2c2",
+      "theme_id": "other",
+      "rating": 3,
+      "date": "2026-08-16"
+    },
+    {
+      "text": "please add on Cost per Lot in Option Chain.",
+      "review_id": "ac3f93504d87",
+      "theme_id": "trading",
+      "rating": 4,
+      "date": "2026-08-12"
+    },
+    {
+      "text": "Removed manual payment option from sip just because they promote auto payment options...",
+      "review_id": "ac58a48ee1ec",
+      "theme_id": "payments",
+      "rating": 1,
+      "date": "2026-08-12"
+    }
+  ],
+  "actions": [
+    {
+      "title": "Add Cart Icon and Navigation",
+      "detail": "Introduce a persistent cart icon on the MF screen and a direct link to the cart page for seamless investment flow.",
+      "theme_id": "other"
+    },
+    {
+      "title": "Show Cost Per Lot in Option Chain",
+      "detail": "Add a cost‑per‑lot column to the option chain view, enabling traders to see exact lot pricing at a glance.",
+      "theme_id": "trading"
+    },
+    {
+      "title": "Restore Manual SIP Payment Option",
+      "detail": "Re‑enable manual payment selection for SIPs alongside auto, giving users flexibility to schedule payments as preferred.",
+      "theme_id": "payments"
+    }
+  ],
+  "body_word_count": 202,
+  "doc_url": null,
+  "draft_id": null
+}

@@ -1,0 +1,5 @@
+# Lightweight deps for the dashboard service on Railway.
+# Full pipeline deps stay in requirements.txt (GitHub Actions weekly job).
+pydantic>=2.0.0
+pyyaml>=6.0
+python-dotenv>=1.0.0

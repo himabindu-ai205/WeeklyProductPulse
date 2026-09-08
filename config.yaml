@@ -28,7 +28,7 @@ note:
   quote_max_chars: 200
 
 delivery:
-  recipient: "himabindu.avalur@gmail.com"
+  recipient: ""
   doc_title: "Weekly Review Pulse — Groww — {week_ending}"
   email_subject: "Weekly Review Pulse — Groww — {week_ending}"
   email_body_mode: "full_note_plus_link"   # full_note_plus_link | link_only
