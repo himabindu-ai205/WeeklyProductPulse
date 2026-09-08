@@ -352,25 +352,16 @@ flowchart TD
 
 ### Build
 
-- [ ] Add `scripts/run_weekly_pulse.py` (or `src/schedule.py`) that:
+- [x] Add `scripts/run_weekly_pulse.py` (and `src/schedule.py`) that:
   1. Acquires a simple lock file (`data/state/weekly.lock`) so overlapping runs abort.
   2. Refreshes reviews (calls the scrape script, or skips refresh if `--skip-fetch` / a fresh Console CSV is already present).
-  3. Invokes the same path as `python -m src` (subprocess or in-process `main()`).
+  3. Invokes the same path as `python -m src` (subprocess).
   4. Writes `data/artifacts/weekly_run.jsonl` with `{started_at, finished_at, week_ending, status, draft_id, doc_url, error}`.
   5. Exits non-zero on ingest empty / validate abort / publish hard-fail so the OS scheduler can alert.
-- [ ] Config (optional keys in `config.yaml` under `schedule:`):
-  - `enabled: false` by default
-  - `day_of_week` / `hour_local` (documentation for Task Scheduler / cron)
-  - `fetch_before_run: true`
-  - `export_path: data/exports/groww_play_reviews.csv`
-- [ ] Document how to install the trigger on the builder’s machine:
-  - **Windows:** Task Scheduler → weekly → `py -3 scripts\run_weekly_pulse.py`
-  - **macOS/Linux:** cron / `launchd` → same command
-  - **Optional in-process:** `APScheduler` / `schedule` only if you want a long-running `python -m src --daemon`; prefer OS cron for simplicity
-- [ ] Idempotency rules for a scheduled re-run of the **same** `week_ending`:
-  - Docs: append to the registry Doc (Phase 6 behaviour) — acceptable; optional guard: skip publish if `doc_registry.json` already has that week **and** `--once-per-week` is set
-  - Gmail: each successful publish creates a **new** draft (do not auto-delete old drafts)
-- [ ] Tests: unit-test the wrapper with mocked fetch + mocked `main()` (assert order: fetch → pipeline; lock prevents double entry). No live scrape / MCP in CI.
+- [x] Config keys in `config.yaml` under `schedule:`.
+- [x] Document trigger install: **GitHub Actions** (preferred) + Windows Task Scheduler / cron — see [`scheduler.md`](scheduler.md).
+- [x] Idempotency: `--once-per-week` / `schedule.once_per_week` skips publish when `doc_registry.json` already has that `week_ending`.
+- [x] Tests: `tests/test_phase7.py` (mocked fetch + pipeline; lock busy). No live scrape / MCP in CI.
 
 ### Review refresh policy
 

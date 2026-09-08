@@ -1,0 +1,111 @@
+name: Weekly Review Pulse
+
+# Monday 09:00 Asia/Kolkata = 03:30 UTC
+on:
+  schedule:
+    - cron: "30 3 * * 1"
+  workflow_dispatch:
+    inputs:
+      skip_fetch:
+        description: "Skip Play Store refresh (use committed/existing export)"
+        type: boolean
+        default: false
+      skip_publish:
+        description: "Skip Docs/Gmail MCP publish"
+        type: boolean
+        default: false
+
+concurrency:
+  group: weekly-review-pulse
+  cancel-in-progress: false
+
+jobs:
+  weekly-pulse:
+    name: Refresh → classify → report
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Verify required secrets
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          MCP_HTTP_TOKEN: ${{ secrets.MCP_HTTP_TOKEN }}
+          GOOGLE_DOC_ID: ${{ secrets.GOOGLE_DOC_ID }}
+          SKIP_PUBLISH: ${{ github.event_name == 'workflow_dispatch' && inputs.skip_publish || false }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GROQ_API_KEY:-}" ]; then
+            echo "Missing repository secret: GROQ_API_KEY"
+            exit 1
+          fi
+          if [ "${SKIP_PUBLISH}" != "true" ]; then
+            if [ -z "${MCP_HTTP_TOKEN:-}" ]; then
+              echo "Missing repository secret: MCP_HTTP_TOKEN (or set skip_publish)"
+              exit 1
+            fi
+            if [ -z "${GOOGLE_DOC_ID:-}" ]; then
+              echo "Missing repository secret: GOOGLE_DOC_ID (or set skip_publish)"
+              exit 1
+            fi
+          fi
+          echo "Secrets check OK"
+
+      - name: Write .env for the run
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          PULSE_MODEL: ${{ secrets.PULSE_MODEL }}
+          MCP_SERVER_URL: ${{ secrets.MCP_SERVER_URL }}
+          MCP_HTTP_TOKEN: ${{ secrets.MCP_HTTP_TOKEN }}
+          GOOGLE_DOC_ID: ${{ secrets.GOOGLE_DOC_ID }}
+        run: |
+          set -euo pipefail
+          {
+            echo "GROQ_API_KEY=${GROQ_API_KEY}"
+            echo "PULSE_MODEL=${PULSE_MODEL:-openai/gpt-oss-120b}"
+            echo "MCP_SERVER_URL=${MCP_SERVER_URL:-https://mcp-server-production-f0ca.up.railway.app}"
+            echo "MCP_HTTP_TOKEN=${MCP_HTTP_TOKEN:-}"
+            echo "GOOGLE_DOC_ID=${GOOGLE_DOC_ID:-}"
+            echo "DOCS_MCP_SERVER=google-workspace"
+            echo "GMAIL_MCP_SERVER=google-workspace"
+            echo "LANGSMITH_TRACING=false"
+          } > .env
+
+      - name: Run weekly pulse
+        env:
+          SKIP_FETCH: ${{ github.event_name == 'workflow_dispatch' && inputs.skip_fetch || false }}
+          SKIP_PUBLISH: ${{ github.event_name == 'workflow_dispatch' && inputs.skip_publish || false }}
+        run: |
+          set -euo pipefail
+          ARGS=()
+          # schedule events have empty inputs — treat as full fetch + publish
+          if [ "${SKIP_FETCH:-false}" = "true" ]; then
+            ARGS+=(--skip-fetch)
+          fi
+          if [ "${SKIP_PUBLISH:-false}" = "true" ]; then
+            ARGS+=(--skip-publish)
+          fi
+          python scripts/run_weekly_pulse.py "${ARGS[@]}"
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-pulse-${{ github.run_id }}
+          path: |
+            data/artifacts/
+            data/state/doc_registry.json
+            data/exports/groww_play_reviews.csv
+          if-no-files-found: warn
+          retention-days: 30

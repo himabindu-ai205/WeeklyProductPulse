@@ -56,6 +56,19 @@ class LimitsConfig(BaseModel):
     llm_request_interval_seconds: float = Field(default=2.5, ge=0)
 
 
+class ScheduleConfig(BaseModel):
+    """Ops knobs for Phase 7 weekly runs (GitHub Actions / Task Scheduler / cron)."""
+
+    enabled: bool = False
+    day_of_week: str = "monday"
+    hour_local: int = Field(default=9, ge=0, le=23)
+    timezone: str = "Asia/Kolkata"
+    fetch_before_run: bool = True
+    export_path: str = "data/exports/groww_play_reviews.csv"
+    scrape_count: int = Field(default=2000, ge=100)
+    once_per_week: bool = False
+
+
 class AppConfig(BaseModel):
     """Behavioural knobs from config.yaml (no secrets)."""
 
@@ -69,6 +82,7 @@ class AppConfig(BaseModel):
     note: NoteConfig
     delivery: DeliveryConfig
     limits: LimitsConfig
+    schedule: ScheduleConfig = Field(default_factory=ScheduleConfig)
 
 
 class EnvSettings(BaseModel):

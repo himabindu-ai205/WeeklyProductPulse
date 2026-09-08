@@ -19,6 +19,7 @@ from .publish import (
     update_pulse_artifact_with_publish,
 )
 from .redact import redact_from_artifacts
+from .schedule import week_already_published
 from .theme_math import top_n_themes
 
 
@@ -47,6 +48,7 @@ def _print_config() -> int:
             "email_body_mode": app.delivery.email_body_mode,
         },
         "limits": app.limits.model_dump(),
+        "schedule": app.schedule.model_dump(),
         "env": {
             "pulse_model": env.pulse_model,
             "mcp_server_url": env.mcp_server_url,
@@ -89,6 +91,7 @@ def _run_pipeline(
     *,
     skip_llm: bool,
     skip_publish: bool,
+    once_per_week: bool = False,
 ) -> int:
     settings = load_settings()
     artifacts = settings.root / "data" / "artifacts"
@@ -242,17 +245,23 @@ def _run_pipeline(
         exit_code = 0
 
         # Phase 6 — MCP publish only after validate passes
+        do_publish = not skip_publish
+        skip_reason: str | None = None
         if skip_publish:
-            status["publish"] = {"ran": False, "reason": "skip_publish flag"}
-        elif not settings.env.mcp_http_token:
-            status["publish"] = {
-                "ran": False,
-                "reason": "MCP_HTTP_TOKEN not set — skipped Docs/Gmail publish",
-            }
-            print(
-                "[publish] skipped (set MCP_HTTP_TOKEN to enable Railway MCP)",
-                file=sys.stderr,
-            )
+            skip_reason = "skip_publish flag"
+        elif once_per_week and orch.pulse is not None:
+            week_key = orch.pulse.week_ending.isoformat()
+            registry_file = settings.root / "data" / "state" / "doc_registry.json"
+            if week_already_published(registry_file, week_key):
+                do_publish = False
+                skip_reason = f"once_per_week: {week_key} already in doc_registry"
+        if do_publish and not settings.env.mcp_http_token:
+            do_publish = False
+            skip_reason = "MCP_HTTP_TOKEN not set — skipped Docs/Gmail publish"
+
+        if not do_publish:
+            status["publish"] = {"ran": False, "reason": skip_reason}
+            print(f"[publish] skipped ({skip_reason})", file=sys.stderr)
         else:
             assert orch.pulse is not None and orch.md is not None
             print(
@@ -305,6 +314,11 @@ def main(argv: list[str] | None = None) -> int:
         help="Stop after validate (no Docs/Gmail MCP publish)",
     )
     parser.add_argument(
+        "--once-per-week",
+        action="store_true",
+        help="Skip Docs/Gmail if this week_ending is already in doc_registry",
+    )
+    parser.add_argument(
         "--serve",
         action="store_true",
         help="Serve the local Stitch dashboard (http://127.0.0.1:8080/)",
@@ -328,6 +342,7 @@ def main(argv: list[str] | None = None) -> int:
         args.exports or None,
         skip_llm=args.skip_llm,
         skip_publish=args.skip_publish,
+        once_per_week=args.once_per_week,
     )
 
 

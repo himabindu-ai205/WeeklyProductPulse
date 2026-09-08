@@ -23,6 +23,7 @@ data/artifacts/*
 !data/artifacts/.gitkeep
 data/raw/*
 !data/raw/.gitkeep
+data/state/weekly.lock
 
 # IDE / OS
 .idea/

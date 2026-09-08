@@ -5,6 +5,7 @@ Package: com.nextbillion.groww (hl=en_IN listing).
 
 from __future__ import annotations
 
+import argparse
 import csv
 import time
 from datetime import datetime, timezone
@@ -18,23 +19,23 @@ OUT = ROOT / "data" / "exports" / "groww_play_reviews.csv"
 APP_ID = "com.nextbillion.groww"
 LANG = "en"
 COUNTRY = "in"
-# Newest reviews; enough to cover ~8–12 weeks for a high-volume app
-TARGET_COUNT = 10000
+DEFAULT_TARGET_COUNT = 10000
 BATCH = 200
 
 
-def main() -> None:
+def fetch_reviews(*, target_count: int = DEFAULT_TARGET_COUNT, out: Path = OUT) -> Path:
     all_rows: list[dict] = []
     token = None
     seen_ids: set[str] = set()
+    target_count = max(1, int(target_count))
 
-    while len(all_rows) < TARGET_COUNT:
+    while len(all_rows) < target_count:
         batch, token = reviews(
             APP_ID,
             lang=LANG,
             country=COUNTRY,
             sort=Sort.NEWEST,
-            count=BATCH,
+            count=min(BATCH, target_count - len(all_rows)),
             continuation_token=token,
         )
         if not batch:
@@ -74,8 +75,8 @@ def main() -> None:
             break
         time.sleep(0.5)
 
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    with OUT.open("w", newline="", encoding="utf-8") as f:
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with out.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(
             f,
             fieldnames=[
@@ -90,9 +91,28 @@ def main() -> None:
         writer.writerows(all_rows)
 
     dates = [r["Review Submit Date and Time"] for r in all_rows if r["Review Submit Date and Time"]]
-    print(f"wrote {len(all_rows)} reviews -> {OUT}")
+    print(f"wrote {len(all_rows)} reviews -> {out}")
     if dates:
         print(f"date range: {min(dates)} .. {max(dates)}")
+    return out
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description="Scrape Groww Play Store reviews")
+    parser.add_argument(
+        "--count",
+        type=int,
+        default=DEFAULT_TARGET_COUNT,
+        help=f"Max reviews to fetch (default {DEFAULT_TARGET_COUNT})",
+    )
+    parser.add_argument(
+        "--out",
+        type=Path,
+        default=OUT,
+        help="Output CSV path",
+    )
+    args = parser.parse_args(argv)
+    fetch_reviews(target_count=args.count, out=args.out)
 
 
 if __name__ == "__main__":

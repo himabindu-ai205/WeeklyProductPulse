@@ -40,3 +40,14 @@ limits:
   generate_max_attempts: 3
   # ~30 requests/minute → 2.5s gap between LLM calls
   llm_request_interval_seconds: 2.5
+
+# Phase 7 — weekly ops (GitHub Actions / Task Scheduler / cron)
+schedule:
+  enabled: true
+  day_of_week: monday
+  hour_local: 9                    # 09:00 Asia/Kolkata → cron 30 3 * * 1 UTC
+  timezone: Asia/Kolkata
+  fetch_before_run: true
+  export_path: data/exports/groww_play_reviews.csv
+  scrape_count: 2000               # enough for ~8–12 weeks without a 10k scrape
+  once_per_week: true              # skip Docs/Gmail if this week_ending already published
