@@ -513,7 +513,7 @@
           });
           const data = await res.json().catch(() => ({}));
           if (!res.ok || !data.ok) {
-            openModal(data.detail || "Could not add pulse to Google Doc.");
+            openModal(data.detail || "Could not add pulse to Google Doc.", "Could not add to Doc");
             if (addDocText) addDocText.textContent = label;
             addDocBtn.disabled = false;
             return;
@@ -530,7 +530,7 @@
             addDocBtn.disabled = false;
           }, 2000);
         } catch {
-          openModal("Could not reach the server to add to Google Doc.");
+          openModal("Could not reach the server to add to Google Doc.", "Could not add to Doc");
           if (addDocText) addDocText.textContent = label;
           addDocBtn.disabled = false;
         }
@@ -649,16 +649,20 @@
     el.classList.toggle("text-on-surface", !cb.checked);
   }
 
-  function openModal(detail) {
+  function openModal(detail, title) {
     const overlay = $("draft-modal");
     const desc = $("modal-description");
+    const titleEl = $("modal-title");
     if (desc) desc.textContent = detail;
+    if (titleEl && title) titleEl.textContent = title;
     overlay?.classList.remove("hidden");
     $("btn-done")?.focus();
   }
 
   function closeModal() {
     $("draft-modal")?.classList.add("hidden");
+    const titleEl = $("modal-title");
+    if (titleEl) titleEl.textContent = "Draft created";
   }
 
   function paint() {
