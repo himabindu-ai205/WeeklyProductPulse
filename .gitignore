@@ -39,3 +39,8 @@ Thumbs.db
 
 # Local dashboard runtime
 frontend/node_modules/
+
+.vercel
+.env*
+!.env.example
+!.env.example.*

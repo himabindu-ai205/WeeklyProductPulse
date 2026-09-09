@@ -431,7 +431,7 @@
               <div class="relative flex-1">
                 <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-tertiary text-base">mail</span>
                 <label class="sr-only" for="email-target">Recipient email</label>
-                <input id="email-target" class="w-full bg-surface-container-lowest text-on-surface font-body-md text-body-md pl-9 pr-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-tertiary" type="email" value="${escapeHtml(state.meta.default_recipient || "")}" placeholder="name@company.com" autocomplete="email" required>
+                <input id="email-target" class="w-full bg-surface-container-lowest text-on-surface font-body-md text-body-md pl-9 pr-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-tertiary" type="email" value="" placeholder="name@company.com" autocomplete="off" required>
               </div>
               <button type="button" id="draft-email-btn" class="inline-flex items-center justify-center gap-2 px-space-lg py-2 rounded-full bg-primary hover:bg-primary-container text-on-primary font-headline-sm text-label-md font-semibold active:scale-[0.98]">
                 <span class="material-symbols-outlined text-base">outgoing_mail</span>

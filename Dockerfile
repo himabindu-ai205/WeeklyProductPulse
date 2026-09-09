@@ -13,7 +13,6 @@ COPY requirements-app.txt .
 RUN pip install --no-cache-dir -r requirements-app.txt
 
 COPY config.yaml .
-COPY .env.example .
 COPY src ./src
 COPY data ./data
 
