@@ -22,6 +22,12 @@ from .archive import (
     resolve_week_query,
 )
 from .config import ROOT, load_settings
+from .publish import (
+    PublishError,
+    append_pulse_to_google_doc,
+    update_pulse_artifact_with_publish,
+)
+from .schemas import Pulse
 
 FRONTEND = ROOT / "frontend"
 ARTIFACTS = ROOT / "data" / "artifacts"
@@ -33,8 +39,36 @@ def _query_week(query: dict[str, list[str]]):
     return resolve_week_query(ARTIFACTS, week, week_ending)
 
 
+def _publish_doc_for_week(week) -> dict:
+    """Append selected week's pulse to GOOGLE_DOC_ID via MCP."""
+    settings = load_settings()
+    if not settings.env.mcp_http_token:
+        raise PublishError("MCP_HTTP_TOKEN is not set")
+    if not settings.env.google_doc_id:
+        raise PublishError("GOOGLE_DOC_ID is not set")
+
+    data = load_pulse(ARTIFACTS, week)
+    md = load_pulse_md(ARTIFACTS, week)
+    if data is None or md is None:
+        detail = "No pulse report yet"
+        if week is not None:
+            detail = f"No pulse for week ending {week.isoformat()}"
+        raise FileNotFoundError(detail)
+
+    pulse = Pulse.model_validate(data)
+    pub = append_pulse_to_google_doc(pulse, md, settings)
+    update_pulse_artifact_with_publish(ARTIFACTS, pulse, pub)
+    return {
+        "ok": True,
+        "doc_id": pub.doc_id,
+        "doc_url": pub.doc_url,
+        "week_ending": pulse.week_ending.isoformat(),
+        "message": "Pulse appended to Google Doc",
+    }
+
+
 def _api_routes(handler: BaseHTTPRequestHandler, path: str, query: dict[str, list[str]]) -> bool:
-    """Handle /api/* routes. Returns True if handled."""
+    """Handle GET /api/* routes. Returns True if handled."""
     if path == "/api/health":
         handler._send_json(  # type: ignore[attr-defined]
             {
@@ -91,6 +125,27 @@ def _api_routes(handler: BaseHTTPRequestHandler, path: str, query: dict[str, lis
     return False
 
 
+def _api_post_routes(
+    handler: BaseHTTPRequestHandler, path: str, query: dict[str, list[str]]
+) -> bool:
+    """Handle POST /api/* routes. Returns True if handled."""
+    if path == "/api/publish-doc":
+        week = _query_week(query)
+        try:
+            payload = _publish_doc_for_week(week)
+            handler._send_json(payload)  # type: ignore[attr-defined]
+        except FileNotFoundError as e:
+            handler._send_json({"ok": False, "detail": str(e)}, status=404)  # type: ignore[attr-defined]
+        except PublishError as e:
+            handler._send_json({"ok": False, "detail": str(e)}, status=502)  # type: ignore[attr-defined]
+        except Exception as e:  # noqa: BLE001
+            handler._send_json(  # type: ignore[attr-defined]
+                {"ok": False, "detail": f"Publish failed: {e}"}, status=500
+            )
+        return True
+    return False
+
+
 class _JsonMixin:
     serve_mode = "full"
 
@@ -104,12 +159,16 @@ class _JsonMixin:
                 "product_name": settings.app.product_name,
                 "email_subject": settings.app.delivery.email_subject,
                 "default_recipient": settings.app.delivery.recipient,
+                "google_doc_configured": bool(settings.env.google_doc_id),
+                "mcp_configured": bool(settings.env.mcp_http_token),
             }
         except Exception:  # noqa: BLE001
             payload = {
                 "product_name": "Groww",
                 "email_subject": "Weekly Review Pulse — Groww — {week_ending}",
                 "default_recipient": "",
+                "google_doc_configured": False,
+                "mcp_configured": False,
             }
         self._send_json(payload)
 
@@ -121,6 +180,11 @@ class _JsonMixin:
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(body)
+
+    def _discard_body(self) -> None:
+        length = int(self.headers.get("Content-Length") or 0)
+        if length > 0:
+            self.rfile.read(length)
 
 
 class PulseHandler(_JsonMixin, SimpleHTTPRequestHandler):
@@ -136,6 +200,15 @@ class PulseHandler(_JsonMixin, SimpleHTTPRequestHandler):
         if _api_routes(self, path, query):
             return
         super().do_GET()
+
+    def do_POST(self) -> None:  # noqa: N802
+        parsed = urlparse(self.path)
+        path = parsed.path.rstrip("/") or "/"
+        query = parse_qs(parsed.query)
+        self._discard_body()
+        if _api_post_routes(self, path, query):
+            return
+        self._send_json({"detail": "Not Found"}, status=404)
 
 
 class BackendOnlyHandler(_JsonMixin, BaseHTTPRequestHandler):
@@ -158,11 +231,21 @@ class BackendOnlyHandler(_JsonMixin, BaseHTTPRequestHandler):
                         "/api/pulse",
                         "/api/pulse.md",
                         "/api/meta",
+                        "POST /api/publish-doc",
                     ],
                 }
             )
             return
         if _api_routes(self, path, query):
+            return
+        self._send_json({"detail": "Not Found"}, status=404)
+
+    def do_POST(self) -> None:  # noqa: N802
+        parsed = urlparse(self.path)
+        path = parsed.path.rstrip("/") or "/"
+        query = parse_qs(parsed.query)
+        self._discard_body()
+        if _api_post_routes(self, path, query):
             return
         self._send_json({"detail": "Not Found"}, status=404)
 

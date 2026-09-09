@@ -280,6 +280,32 @@ class TestPublishPulse:
         assert "corpus" not in blob.lower() or "Payments" in blob
 
 
+    def test_append_doc_only_no_gmail(self, tmp_path: Path):
+        append = FakeTool(
+            "append_to_google_doc",
+            lambda inp: {"success": True, "documentId": inp["documentId"]},
+        )
+        draft = FakeTool(
+            "create_email_draft",
+            lambda _: {"success": True, "draftId": "SHOULD_NOT"},
+        )
+        from src.publish import append_pulse_to_google_doc
+
+        settings = _settings(tmp_path)
+        result = append_pulse_to_google_doc(
+            _minimal_pulse(),
+            MD,
+            settings,
+            tools=[append, draft],
+            registry_path=tmp_path / "reg.json",
+        )
+        assert result.docs_ok is True
+        assert result.doc_url
+        assert result.draft_id is None
+        assert draft.calls == []
+        assert len(append.calls) == 1
+
+
 class TestParsePayload:
     def test_nested_content_block_string(self):
         from src.publish import _parse_tool_payload

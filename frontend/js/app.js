@@ -413,9 +413,13 @@
                 <h2 class="font-headline-md text-headline-md font-bold text-on-surface">Share</h2>
                 <span class="font-label-sm text-label-sm font-semibold text-secondary uppercase bg-surface-container px-space-xs py-0.5 rounded">Internal only</span>
               </div>
-              <p class="font-body-sm text-body-sm text-secondary mt-0.5">Copy a link, download the note, or draft email to your alias.</p>
+              <p class="font-body-sm text-body-sm text-secondary mt-0.5">Add to your Google Doc, copy a link, download the note, or draft email.</p>
             </div>
             <div class="flex items-center gap-space-xs">
+              <button type="button" id="add-doc-btn" class="inline-flex items-center gap-1.5 px-space-sm py-1.5 rounded-full bg-surface-container-low hover:bg-surface-container-high text-on-surface font-label-md text-label-md font-semibold disabled:opacity-50 disabled:pointer-events-none">
+                <span class="material-symbols-outlined text-sm text-secondary">description</span>
+                <span id="add-doc-btn-text">Add to Google Doc</span>
+              </button>
               <button type="button" id="copy-link-btn" class="inline-flex items-center gap-1.5 px-space-sm py-1.5 rounded-full bg-surface-container-low hover:bg-surface-container-high text-on-surface font-label-md text-label-md font-semibold">
                 <span class="material-symbols-outlined text-sm text-secondary">link</span>
                 <span id="copy-btn-text">Copy link</span>
@@ -489,6 +493,49 @@
         toggleDone(cb);
       });
     });
+
+    const addDocBtn = $("add-doc-btn");
+    const addDocText = $("add-doc-btn-text");
+    if (addDocBtn) {
+      addDocBtn.addEventListener("click", async () => {
+        if (addDocBtn.disabled) return;
+        const label = addDocText?.textContent || "Add to Google Doc";
+        addDocBtn.disabled = true;
+        if (addDocText) addDocText.textContent = "Adding…";
+        const weekQ = state.selectedWeekEnding
+          ? `?week_ending=${encodeURIComponent(state.selectedWeekEnding)}`
+          : "";
+        try {
+          const res = await fetch(`/api/publish-doc${weekQ}`, {
+            method: "POST",
+            headers: { Accept: "application/json" },
+            cache: "no-store",
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data.ok) {
+            openModal(data.detail || "Could not add pulse to Google Doc.");
+            if (addDocText) addDocText.textContent = label;
+            addDocBtn.disabled = false;
+            return;
+          }
+          if (data.doc_url && state.pulse) {
+            state.pulse.doc_url = data.doc_url;
+          }
+          if (addDocText) addDocText.textContent = "Added!";
+          if (data.doc_url) {
+            window.open(data.doc_url, "_blank", "noopener,noreferrer");
+          }
+          setTimeout(() => {
+            if (addDocText) addDocText.textContent = label;
+            addDocBtn.disabled = false;
+          }, 2000);
+        } catch {
+          openModal("Could not reach the server to add to Google Doc.");
+          if (addDocText) addDocText.textContent = label;
+          addDocBtn.disabled = false;
+        }
+      });
+    }
 
     const copyBtn = $("copy-link-btn");
     const copyText = $("copy-btn-text");

@@ -407,14 +407,79 @@ def publish_pulse(
     return result
 
 
+def append_pulse_to_google_doc(
+    pulse: Pulse,
+    md: str,
+    settings: Settings,
+    *,
+    tools: Sequence[Any] | None = None,
+    registry_path: Path | None = None,
+    load_tools_fn: Callable[[Settings], list[Any]] | None = None,
+) -> PublishResult:
+    """Append pulse markdown to the configured Google Doc only (no Gmail draft).
+
+    Uses ``GOOGLE_DOC_ID`` / registry — never creates a new Drive file.
+    Hard-fails if the Doc id is missing or append fails (for UI / API callers).
+    """
+    result = PublishResult()
+    app = settings.app
+    week_key = pulse.week_ending.isoformat()
+
+    registry_file = registry_path or (settings.root / "data" / "state" / "doc_registry.json")
+    registry = load_doc_registry(registry_file)
+
+    document_id = (
+        registry.get(week_key)
+        or settings.env.google_doc_id
+        or registry.get("_default")
+    )
+    if not document_id:
+        raise PublishError(
+            "No GOOGLE_DOC_ID configured. Create a Doc once and set GOOGLE_DOC_ID in .env."
+        )
+
+    loader = load_tools_fn or load_mcp_tools
+    mcp_tools = list(tools) if tools is not None else loader(settings)
+    resolved = resolve_tools(mcp_tools, require_draft=False)
+    if "append_doc" not in resolved:
+        names = sorted(getattr(t, "name", "") for t in mcp_tools)
+        raise PublishError(
+            "MCP append_to_google_doc tool missing. Exposed tools: "
+            + ", ".join(names or ["(none)"])
+        )
+
+    content = (
+        f"\n\n---\n"
+        f"# {app.delivery.doc_title.format(week_ending=week_key)}\n\n"
+        f"{md.rstrip()}\n"
+    )
+    doc_id, doc_url, err = publish_doc(
+        resolved, document_id=document_id, content=content
+    )
+    if err:
+        raise PublishError(f"Docs append failed: {err}")
+
+    result.docs_ok = True
+    result.doc_id = doc_id
+    result.doc_url = doc_url
+    registry[week_key] = str(doc_id)
+    if settings.env.google_doc_id:
+        registry["_default"] = settings.env.google_doc_id
+    save_doc_registry(registry_file, registry)
+    return result
+
+
 def update_pulse_artifact_with_publish(
     artifacts_dir: Path,
     pulse: Pulse,
     publish: PublishResult,
 ) -> Pulse:
-    """Write doc_url / draft_id back into pulse.json."""
+    """Write doc_url / draft_id back into pulse.json (latest + history)."""
     updated = pulse.model_copy(
-        update={"doc_url": publish.doc_url, "draft_id": publish.draft_id}
+        update={
+            "doc_url": publish.doc_url if publish.doc_url is not None else pulse.doc_url,
+            "draft_id": publish.draft_id if publish.draft_id is not None else pulse.draft_id,
+        }
     )
     path = artifacts_dir / "pulse.json"
     path.write_text(
@@ -422,4 +487,20 @@ def update_pulse_artifact_with_publish(
     )
     report_path = artifacts_dir / "publish_report.json"
     report_path.write_text(json.dumps(publish.to_dict(), indent=2), encoding="utf-8")
+    try:
+        from .archive import archive_pulse
+
+        md_path = artifacts_dir / "pulse.md"
+        md = md_path.read_text(encoding="utf-8") if md_path.is_file() else ""
+        hist_md = (
+            artifacts_dir
+            / "history"
+            / updated.week_ending.isoformat()
+            / "pulse.md"
+        )
+        if hist_md.is_file():
+            md = hist_md.read_text(encoding="utf-8")
+        archive_pulse(updated, md, artifacts_dir, update_latest=True)
+    except Exception:  # noqa: BLE001
+        pass
     return updated

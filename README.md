@@ -21,7 +21,7 @@ The pipeline ingests a public review export, redacts PII, clusters themes, write
 5. **Generate** a pulse with 3 highlighted themes, 3 verbatim quotes, 3 actions.
 6. **Validate** (word limit, quote provenance, PII, theme counts) with retries.
 7. **Publish** (optional): append Google Doc + Gmail draft through [Google Workspace MCP](https://github.com/himabindu-ai205/MCP-Server).
-8. **Dashboard**: last 4 reporting weeks; share link / download `.md` / open Gmail compose.
+8. **Dashboard**: last 4 reporting weeks; add to Google Doc / share link / download `.md` / open Gmail compose.
 
 Weekly ops: GitHub Actions every Monday 09:00 IST — see [`docs/scheduler.md`](docs/scheduler.md).
 
@@ -110,6 +110,7 @@ python -m src --serve --backend-only
 | `GET /api/pulse` | Latest pulse (`?week_ending=` / `?week=YYYY-Www`) |
 | `GET /api/pulse.md` | Markdown note |
 | `GET /api/meta` | Product name, email subject, default recipient |
+| `POST /api/publish-doc` | Append selected week’s pulse to `GOOGLE_DOC_ID` via MCP |
 
 ---
 

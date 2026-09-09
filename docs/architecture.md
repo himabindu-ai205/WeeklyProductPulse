@@ -11,22 +11,23 @@ Weekly Review Pulse turns a public **Groww** Play Store review export into a one
 
 1. [Purpose and scope](#1-purpose-and-scope)
 2. [Design principles](#2-design-principles)
-3. [System context](#3-system-context)
-4. [Pipeline overview](#4-pipeline-overview)
-5. [Time windows: weekly note from a 12-week corpus](#5-time-windows-weekly-note-from-a-12-week-corpus)
-6. [LangChain agent design](#6-langchain-agent-design)
-7. [Repository layout](#7-repository-layout)
-8. [Configuration](#8-configuration)
-9. [Data model](#9-data-model)
-10. [Stage specifications](#10-stage-specifications)
-11. [Worked example](#11-worked-example)
-12. [Constraint enforcement](#12-constraint-enforcement)
-13. [Error handling](#13-error-handling)
-14. [Privacy and security](#14-privacy-and-security)
-15. [Testing](#15-testing)
-16. [Observability](#16-observability)
-17. [Audience fit](#17-audience-fit)
-18. [Definition of done](#18-definition-of-done)
+3. [Tech stack](#3-tech-stack)
+4. [System context](#4-system-context)
+5. [Pipeline overview](#5-pipeline-overview)
+6. [Time windows: weekly note from a 12-week corpus](#6-time-windows-weekly-note-from-a-12-week-corpus)
+7. [LangChain agent design](#7-langchain-agent-design)
+8. [Repository layout](#8-repository-layout)
+9. [Configuration](#9-configuration)
+10. [Data model](#10-data-model)
+11. [Stage specifications](#11-stage-specifications)
+12. [Worked example](#12-worked-example)
+13. [Constraint enforcement](#13-constraint-enforcement)
+14. [Error handling](#14-error-handling)
+15. [Privacy and security](#15-privacy-and-security)
+16. [Testing](#16-testing)
+17. [Observability](#17-observability)
+18. [Audience fit](#18-audience-fit)
+19. [Definition of done](#19-definition-of-done)
 
 ---
 
@@ -49,7 +50,7 @@ Weekly Review Pulse turns a public **Groww** Play Store review export into a one
 - **App Store / iOS reviews** in any form.
 - Scraping store pages, developer-console logins, or other ToS-violating automation.
 - Direct Google Docs / Gmail REST calls or a bespoke OAuth flow.
-- User accounts, a web UI, or a hosted scheduler. A local agent run is the deliverable.
+- User accounts or multi-tenant auth. A static dashboard and hosted API/scheduler may exist for ops; they are not a product SaaS.
 - Invented quotes, reviewer identities, or device-level telemetry.
 
 ### Where Groww reviews come from
@@ -82,7 +83,60 @@ Not acceptable: scraping https://play.google.com/store/apps/details?id=com.nextb
 
 ---
 
-## 3. System context
+## 3. Tech stack
+
+Weekly Review Pulse is split into a **pipeline + API backend** and a **static dashboard frontend**. Google Docs/Gmail stay on an external **MCP** server; this repo does not embed Google OAuth or REST clients.
+
+### 3.1 Backend
+
+| Layer | Choice | Role |
+| --- | --- | --- |
+| Language / runtime | **Python 3.12** | Pipeline, validation, stdlib HTTP server |
+| Agent framework | **LangChain** (`langchain-core`) | Prompts, structured output for cluster/generate |
+| Orchestration | **LangGraph** (optional) or Python runner | Generate → validate → retry / abort / publish |
+| Chat model | **Groq** via `langchain-groq` | Default model from `PULSE_MODEL` (e.g. `openai/gpt-oss-120b`) |
+| MCP tools | `langchain-mcp-adapters` | Bind Docs append + Gmail **draft** tools only |
+| Schemas / config | **Pydantic v2**, **PyYAML**, **python-dotenv** | Contracts, `config.yaml`, `.env` |
+| Review fetch (ops) | `google-play-scraper` | Optional public Play scrape into `data/exports/` |
+| Language filter | `langdetect` | Drop non-English rows at ingest |
+| HTTP API | **stdlib** `http.server` (`src/web.py`) | `/api/health`, `/api/weeks`, `/api/pulse`, `/api/meta` |
+| Hosting (API) | **Railway** + Docker (`Dockerfile`, `requirements-app.txt`) | Backend-only serve; slim image without LangChain for the read API |
+| Weekly job | **GitHub Actions** (+ local `scripts/run_weekly_pulse.py`) | Monday 09:00 IST cron |
+
+**Dependency split**
+
+| File | Used for |
+| --- | --- |
+| `requirements.txt` | Full pipeline (Actions / local `python -m src`) |
+| `requirements-app.txt` | Railway API image (Pydantic / YAML / dotenv only) |
+
+### 3.2 Frontend
+
+| Layer | Choice | Role |
+| --- | --- | --- |
+| UI | **Static HTML / CSS / JS** under `frontend/` | Stitch-style Groww Weekly Review Pulse dashboard |
+| Styling | **Tailwind CSS** (CDN) + custom CSS variables | Layout, tokens, responsive UI |
+| Fonts | **Lora** + **DM Sans** (Google Fonts), Material Symbols | Display / body / icons |
+| Data | `fetch` to same-origin `/api/*` | Pulse JSON, weeks list, markdown download |
+| Share | Gmail compose URL (+ mailto / clipboard fallback) | Opens a draft; does not call Gmail API from the browser |
+| Hosting | **Vercel** (Root Directory = `frontend`) | Static deploy |
+| API proxy | `frontend/vercel.json` rewrites | `/api/:path*` → Railway backend |
+
+The dashboard is a **read/share UI** over artifacts already produced by the backend pipeline. It does not run cluster/generate in the browser.
+
+### 3.3 External systems
+
+| System | Role |
+| --- | --- |
+| Groq | LLM inference for cluster + generate |
+| Railway Google Workspace MCP | `append_to_google_doc`, `create_email_draft` |
+| Google Docs / Gmail | Destination of publish (draft only; never auto-send) |
+
+LangChain package detail and graph shape remain in [§7](#7-langchain-agent-design).
+
+---
+
+## 4. System context
 
 ```mermaid
 flowchart LR
@@ -122,7 +176,7 @@ flowchart LR
 
 ---
 
-## 4. Pipeline overview
+## 5. Pipeline overview
 
 A linear batch pipeline of five processing stages and two publish steps.
 
@@ -146,7 +200,7 @@ exports/ → ingest → redact → cluster → generate → validate → publish
 
 ---
 
-## 5. Time windows: weekly note from a 12-week corpus
+## 6. Time windows: weekly note from a 12-week corpus
 
 The assignment asks for a 8–12 week import but a **weekly** note. These serve different purposes, and the distinction drives most of the logic:
 
@@ -171,11 +225,11 @@ Clustering runs over the **full corpus** so theme definitions stay stable week t
 
 ---
 
-## 6. LangChain agent design
+## 7. LangChain agent design
 
 **Yes — LangChain is used to build this AI agent.** It owns the model-facing work: prompt templates, structured outputs for themes and the pulse, and binding Docs/Gmail MCP servers as tools. That is enough to implement the “agent” parts of the problem statement.
 
-### 6.0 What needs orchestration (and why that is not “LangGraph required”)
+### 7.0 What needs orchestration (and why that is not “LangGraph required”)
 
 After LangChain writes the pulse, the run still must:
 
@@ -196,32 +250,34 @@ publish_doc(...); draft_email(...)
 
 **LangGraph** (optional but recommended in this repo) can sit on top of LangChain as a state machine: fixed stage order, shared `PulseState`, capped `validate → generate` retries, hard abort on PII. If you skip LangGraph, use the runner pattern above.
 
-### 6.1 Why LangChain fits
+### 7.1 Why LangChain fits
 
 The work is a fixed sequence of typed steps with two external tools — not a conversational assistant. LangChain supplies exactly the pieces needed for the agent:
 
 | Need | Capability |
 | --- | --- |
-| Theme + pulse JSON | LangChain **`with_structured_output(...)`** against Pydantic models in §9 |
+| Theme + pulse JSON | LangChain **`with_structured_output(...)`** against Pydantic models in §10 |
 | Prompt control | LangChain **prompt templates** for cluster and pulse (word limit, verbatim quotes, ≤5 themes) |
 | Docs + Gmail | LangChain **tools** via **`langchain-mcp-adapters`** (MCP-first; no Google REST) |
 | Staged weekly job (optional graph) | **LangGraph** on LangChain: one node per stage, shared state, conditional retry |
 | Self-correction | Conditional edge (LangGraph) **or** a LangChain retry loop in Python on fixable validate failures |
 
-### 6.2 Stack
+### 7.2 LangChain packages
+
+Product-level frontend/backend stack is in [§3](#3-tech-stack). Agent packages:
 
 | Package | Role |
 | --- | --- |
 | `langchain-core` | Prompts, runnables, output parsers |
 | `langgraph` | Pipeline graph, state, conditional retry edge |
-| `langchain-openai` (or another provider package) | Chat model for `cluster` and `generate` |
+| `langchain-groq` | Chat model for `cluster` and `generate` (Groq) |
 | `langchain-mcp-adapters` | Load Docs and Gmail MCP tools as LangChain tools |
 | `pydantic` | `Review`, `Theme`, `Pulse` contracts |
 | `pandas` (optional) | CSV loading and date filtering |
 
 The chat provider is an implementation choice; nothing in this design depends on a specific vendor.
 
-### 6.3 Orchestration graph (LangGraph — optional, recommended)
+### 7.3 Orchestration graph (LangGraph — optional, recommended)
 
 **Phase-5 need = orchestration, not LangGraph itself.** When you choose LangGraph, the weekly job looks like this:
 
@@ -239,9 +295,9 @@ stateDiagram-v2
   draft_email --> [*]
 ```
 
-The retry edge is **conditional and capped** (§13). A PII failure never retries — it aborts. Without LangGraph, enforce the same transitions in a Python runner around the LangChain chains.
+The retry edge is **conditional and capped** (§14). A PII failure never retries — it aborts. Without LangGraph, enforce the same transitions in a Python runner around the LangChain chains.
 
-### 6.4 State
+### 7.4 State
 
 `PulseState` (shared run state — LangGraph `TypedDict` **or** plain dict/object in a Python runner), mirrored to `data/artifacts/` after each stage so any step can be rerun in isolation:
 
@@ -259,7 +315,7 @@ The retry edge is **conditional and capped** (§13). A PII failure never retries
 | `doc_url` | publish_doc | `str \| None` |
 | `draft_id` | draft_email | `str \| None` |
 
-### 6.5 Node types
+### 7.5 Node types
 
 - **Deterministic** — `ingest`, `redact`, `validate`. Pure Python, no model call, fully unit-testable.
 - **LLM** — `cluster`, `generate`. Structured output only; prompts live in `prompts/`.
@@ -267,7 +323,7 @@ The retry edge is **conditional and capped** (§13). A PII failure never retries
 
 This is deliberately **not** a free-form ReAct agent. Whether you use LangGraph nodes or a LangChain + Python runner, the theme cap, word limit, and PII gate must be enforced in code — not left to the model to “remember.”
 
-### 6.6 MCP binding
+### 7.6 MCP binding
 
 ```text
 Orchestrator (LangGraph tool node OR Python calling LangChain tools)
@@ -288,7 +344,7 @@ If no MCP adapter package is available, bind the MCP tools the environment alrea
 
 ---
 
-## 7. Repository layout
+## 8. Repository layout
 
 ```
 M3-9/
@@ -331,7 +387,7 @@ M3-9/
 
 ---
 
-## 8. Configuration
+## 9. Configuration
 
 Behavioural knobs live in `config.yaml`; secrets live in `.env`. Nothing that affects output is hardcoded in a module.
 
@@ -390,9 +446,9 @@ Note the seed list has 5 entries and `max_total` is 5, so `other` can only appea
 
 ---
 
-## 9. Data model
+## 10. Data model
 
-### 9.1 Review
+### 10.1 Review
 
 One row of the export after ingest.
 
@@ -400,7 +456,7 @@ One row of the export after ingest.
 | --- | --- | --- |
 | `id` | `str` | SHA-1 of `date + rating + title + text`, truncated to 12 chars. Never derived from a username. |
 | `store` | `Literal["play_store"]` | Kept as a single-value enum for forward compatibility if another store is added later. |
-| `date` | `date` | Drives both windows in §5. |
+| `date` | `date` | Drives both windows in §6. |
 | `rating` | `int \| None` | 1–5 when the export provides it. |
 | `title` | `str` | Play Console exports include a review title; it is often blank. |
 | `text` | `str` | Required. Rows with empty text are dropped. |
@@ -408,7 +464,7 @@ One row of the export after ingest.
 
 **Never persisted:** reviewer name, reviewer profile URL, email, user ID, device ID, IP, or any other identity-bearing column. These are dropped during column mapping, before the first artifact is written.
 
-### 9.2 Theme
+### 10.2 Theme
 
 | Field | Type | Notes |
 | --- | --- | --- |
@@ -420,7 +476,7 @@ One row of the export after ingest.
 | `count_week` | `int` | Members inside the reporting window. |
 | `avg_rating_week` | `float \| None` | Mean rating for the reporting week. |
 | `baseline_weekly` | `float` | Mean weekly count over the prior 11 weeks. |
-| `trend` | `"rising" \| "falling" \| "steady"` | Per §5. |
+| `trend` | `"rising" \| "falling" \| "steady"` | Per §6. |
 
 Hard cap: **5 themes total**, including `other` if present.
 
@@ -432,7 +488,7 @@ Hard cap: **5 themes total**, including `other` if present.
 
 `other` is excluded from the top 3 unless fewer than 3 real themes exist.
 
-### 9.3 Pulse
+### 10.3 Pulse
 
 ```json
 {
@@ -479,21 +535,21 @@ Hard cap: **5 themes total**, including `other` if present.
 
 `pulse.md` is a pure rendering of this object (`src/render.py`). The Doc body and the email body are rendered from the same function, so they can never drift.
 
-### 9.4 ValidationResult
+### 10.4 ValidationResult
 
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `passed` | `bool` | Gate result. |
-| `body_word_count` | `int` | Counted per §10.5. |
+| `body_word_count` | `int` | Counted per §11.5. |
 | `failures` | `list[str]` | Machine-readable codes, e.g. `WORD_LIMIT`, `QUOTE_NOT_VERBATIM`. |
 | `pii_hits` | `list[str]` | Redacted descriptions of what matched. Non-empty means abort. |
 | `fixable` | `bool` | `True` routes back to `generate`; `False` aborts the run. |
 
 ---
 
-## 10. Stage specifications
+## 11. Stage specifications
 
-### 10.1 Ingest
+### 11.1 Ingest
 
 **Input.** Files in `data/exports/` (CSV or JSON, schema varies by exporter).
 
@@ -523,7 +579,7 @@ Unmapped columns are discarded rather than carried along, which is what keeps re
 
 **Output.** `reviews.normalized.json` plus `ingest_report`: rows read, kept, dropped by reason, App Store files skipped, and min/max date.
 
-### 10.2 Redact
+### 11.2 Redact
 
 Runs **before** any model sees a review, so PII cannot enter a prompt, a theme summary, or a quote.
 
@@ -544,9 +600,9 @@ Guardrails so redaction does not destroy meaning:
 
 **Output.** `reviews.redacted.json`. This file is the sole input to every downstream stage.
 
-### 10.3 Cluster
+### 11.3 Cluster
 
-**Goal.** Assign each corpus review to exactly one of ≤5 themes and compute the §9.2 statistics.
+**Goal.** Assign each corpus review to exactly one of ≤5 themes and compute the §10.2 statistics.
 
 **Procedure**
 
@@ -555,7 +611,7 @@ Guardrails so redaction does not destroy meaning:
 3. **Reconcile.** Any review the model omits or labels unknown falls to `other`.
 4. **Split once, conditionally.** If `other` exceeds 20% of the corpus **and** total themes < 5, ask the model for one new theme label covering the largest coherent slice of `other`, then reassign that slice. Never exceed 5.
 5. **Compute** `count_corpus`, `count_week`, `avg_rating_week`, `baseline_weekly`, and `trend` in Python — not in the model.
-6. **Rank** per §9.2.
+6. **Rank** per §10.2.
 
 A keyword pre-pass is allowed as an optimization, but `themes.json` is the single source of truth.
 
@@ -563,7 +619,7 @@ A keyword pre-pass is allowed as an optimization, but `themes.json` is the singl
 
 **Output.** `themes.json`.
 
-### 10.4 Generate
+### 11.4 Generate
 
 **Input.** Redacted reviews from the reporting window + ranked themes. The prompt receives only the **top 3 themes** and a candidate quote pool, not the entire corpus.
 
@@ -582,7 +638,7 @@ Rank candidates within a theme by `abs(rating - theme_avg)` ascending, so the ch
 
 **Output.** `pulse.json` and `pulse.md`.
 
-### 10.5 Validate
+### 11.5 Validate
 
 Deterministic gate. Every check runs; all failures are collected before deciding.
 
@@ -596,7 +652,7 @@ Deterministic gate. Every check runs; all failures are collected before deciding
 | Quote window | Each quote's review falls inside the reporting window | `QUOTE_OUT_OF_WINDOW` | yes |
 | Action count | Exactly 3, each with a valid `theme_id` | `ACTION_COUNT` | yes |
 | Store purity | Every review is `play_store` | `NON_PLAY_DATA` | **no** |
-| **PII scan** | §10.2 patterns re-run over the rendered `pulse.md` | `PII_DETECTED` | **no** |
+| **PII scan** | §11.2 patterns re-run over the rendered `pulse.md` | `PII_DETECTED` | **no** |
 
 **Word counting is defined precisely** so the check is reproducible:
 
@@ -608,9 +664,9 @@ The same count is stored as `body_word_count` and printed in the run summary.
 
 **Routing.** All pass → `publish_doc`. Fixable failures and `attempts < generate_max_attempts` → back to `generate` with the failure codes appended to the prompt. Non-fixable failure, or attempts exhausted → abort, keep artifacts on disk, publish nothing.
 
-### 10.6 Publish to Google Docs
+### 11.6 Publish to Google Docs
 
-Uses the Docs MCP tools resolved in §6.6.
+Uses the Docs MCP tools resolved in §7.6.
 
 **Idempotency.** `data/state/doc_registry.json` maps `week_ending` → document ID:
 
@@ -627,7 +683,7 @@ This is what stops reruns from littering the Drive with duplicates.
 
 On success, write `doc_url` into state and `pulse.json`.
 
-### 10.7 Draft the Gmail email
+### 11.7 Draft the Gmail email
 
 Uses the Gmail MCP draft tool. **Creates a draft only — never sends.**
 
@@ -642,7 +698,7 @@ Default mode is `full_note_plus_link` because it satisfies the deliverable even 
 
 ---
 
-## 11. Worked example
+## 12. Worked example
 
 A passing note, for prompt calibration and as the expected shape of `pulse.md`:
 
@@ -676,26 +732,26 @@ Body word count ≈ 168, comfortably inside the 250 limit with room for longer q
 
 ---
 
-## 12. Constraint enforcement
+## 13. Constraint enforcement
 
 Each constraint from `problemStatement.md`, and the mechanism that actually enforces it:
 
 | Constraint | Enforced by |
 | --- | --- |
-| Play Store only, no App Store | Ingest header/filename rejection (§10.1) + `NON_PLAY_DATA` gate (§10.5) |
+| Play Store only, no App Store | Ingest header/filename rejection (§11.1) + `NON_PLAY_DATA` gate (§11.5) |
 | Public exports, no scraping | No HTTP client for Play Store; ingest reads local Groww files only. Do not scrape the Groww listing URL. |
-| 8–12 week import | `corpus_weeks: 12` window filter (§5) |
+| 8–12 week import | `corpus_weeks: 12` window filter (§6) |
 | Max 5 themes | `config.themes.max_total`, structured-output schema cap, `THEME_CAP` check |
-| Pulse highlights top 3 | Deterministic ranking (§9.2) sliced to 3, `THEME_COUNT` check |
+| Pulse highlights top 3 | Deterministic ranking (§10.2) sliced to 3, `THEME_COUNT` check |
 | 3 verbatim quotes | Model returns `review_id` only; `render.py` inserts the text; `QUOTE_NOT_VERBATIM` verifies |
 | 3 action ideas | Pydantic `min_items=3, max_items=3` + `ACTION_COUNT` check |
-| ≤250 words | Deterministic count in §10.5 + retry loop |
-| No PII anywhere | Column dropping (§10.1), regex redaction (§10.2), final `PII_DETECTED` abort gate (§10.5) |
+| ≤250 words | Deterministic count in §11.5 + retry loop |
+| No PII anywhere | Column dropping (§11.1), regex redaction (§11.2), final `PII_DETECTED` abort gate (§11.5) |
 | MCP-first Docs & Gmail | Only MCP-derived LangChain tools; no Google client in `requirements.txt` |
 
 ---
 
-## 13. Error handling
+## 14. Error handling
 
 | Failure | Behaviour |
 | --- | --- |
@@ -704,7 +760,7 @@ Each constraint from `problemStatement.md`, and the mechanism that actually enfo
 | Unrecognized columns | Fail with the detected headers and the alias table, so mapping can be extended. |
 | Unparseable dates | Drop the row, count it in the report. |
 | Zero reviews in corpus | Abort before clustering. An empty pulse is worse than no pulse. |
-| Reporting week below `min_week_reviews` | Widen to 4 weeks, set `window_note`, continue (§5). |
+| Reporting week below `min_week_reviews` | Widen to 4 weeks, set `window_note`, continue (§6). |
 | Cluster returns >5 themes | Reject the output, retry once, then merge the smallest into `other`. |
 | Cluster omits reviews | Unassigned reviews fall to `other`; no retry needed. |
 | Quote fails provenance | Fixable — regenerate with that `review_id` excluded (max 3 attempts). |
@@ -719,7 +775,7 @@ Retries must never re-send unredacted text; the retry prompt is built from the s
 
 ---
 
-## 14. Privacy and security
+## 15. Privacy and security
 
 - Play Store exports carry reviewer display names even though reviews are public. Treat every export as sensitive.
 - `.gitignore` must cover `data/exports/`, `data/artifacts/`, and `.env`. Only `data/state/doc_registry.json` is tracked.
@@ -731,7 +787,7 @@ Retries must never re-send unredacted text; the retry prompt is built from the s
 
 ---
 
-## 15. Testing
+## 16. Testing
 
 `pytest`, using `tests/fixtures/play_reviews_sample.csv` (~40 synthetic rows spanning 12 weeks, containing deliberately planted PII and one App Store-shaped file).
 
@@ -744,7 +800,7 @@ Retries must never re-send unredacted text; the retry prompt is built from the s
 | `test_redact_preserves_amounts` | `₹500`, `5 stars`, and `v3.4.1` survive redaction. |
 | `test_ranking_is_deterministic` | Identical input yields identical theme order, including tie-breaks. |
 | `test_trend_calculation` | Rising/falling/steady thresholds behave at the 1.25 and 0.75 boundaries. |
-| `test_word_count_rule` | Headings are excluded and prose is counted per §10.5. |
+| `test_word_count_rule` | Headings are excluded and prose is counted per §11.5. |
 | `test_quote_provenance` | A tampered quote is rejected with `QUOTE_NOT_VERBATIM`. |
 | `test_pii_gate_aborts` | A note containing an email never reaches the publish stage. |
 | `test_thin_week_fallback` | Below-threshold weeks roll up to 4 weeks and set `window_note`. |
@@ -753,7 +809,7 @@ The LLM nodes are tested with a stubbed chat model returning canned structured o
 
 ---
 
-## 16. Observability
+## 17. Observability
 
 - Each node emits one summary line: `[cluster] 1042 reviews → 5 themes (payments 312, kyc 240, …) in 38 calls`.
 - The run ends with a status block: reporting window, review counts, theme ranking, `body_word_count`, `doc_url`, `draft_id`, and any warnings.
@@ -762,7 +818,7 @@ The LLM nodes are tested with a stubbed chat model returning canned structured o
 
 ---
 
-## 17. Audience fit
+## 18. Audience fit
 
 | Audience | What the design gives them |
 | --- | --- |
@@ -772,7 +828,7 @@ The LLM nodes are tested with a stubbed chat model returning canned structured o
 
 ---
 
-## 18. Definition of done
+## 19. Definition of done
 
 A run is complete when all of the following hold:
 
