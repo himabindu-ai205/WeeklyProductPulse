@@ -3,3 +3,6 @@
 pydantic>=2.0.0
 pyyaml>=6.0
 python-dotenv>=1.0.0
+# Needed for POST /api/publish-doc (append to Google Doc via MCP)
+langchain-mcp-adapters>=0.1.0
+mcp>=1.0.0

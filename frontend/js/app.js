@@ -653,8 +653,15 @@
     const overlay = $("draft-modal");
     const desc = $("modal-description");
     const titleEl = $("modal-title");
+    const hint = $("modal-hint");
     if (desc) desc.textContent = detail;
-    if (titleEl && title) titleEl.textContent = title;
+    if (titleEl) titleEl.textContent = title || "Draft created";
+    if (hint) {
+      const isDoc = Boolean(title && /doc/i.test(title));
+      hint.textContent = isDoc
+        ? "Appends this week’s pulse to the Google Doc configured on the server."
+        : "Opens Gmail compose in a new tab (or your mail app). Nothing is sent until you send it.";
+    }
     overlay?.classList.remove("hidden");
     $("btn-done")?.focus();
   }
@@ -662,7 +669,12 @@
   function closeModal() {
     $("draft-modal")?.classList.add("hidden");
     const titleEl = $("modal-title");
+    const hint = $("modal-hint");
     if (titleEl) titleEl.textContent = "Draft created";
+    if (hint) {
+      hint.textContent =
+        "Opens Gmail compose in a new tab (or your mail app). Nothing is sent until you send it.";
+    }
   }
 
   function paint() {
