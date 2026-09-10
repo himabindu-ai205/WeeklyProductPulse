@@ -41,6 +41,8 @@ def _query_week(query: dict[str, list[str]]):
 
 def _publish_doc_for_week(week) -> dict:
     """Append selected week's pulse to GOOGLE_DOC_ID via MCP."""
+    from .render import render_pulse_md
+
     settings = load_settings()
     if not settings.env.mcp_http_token:
         raise PublishError("MCP_HTTP_TOKEN is not set")
@@ -48,14 +50,21 @@ def _publish_doc_for_week(week) -> dict:
         raise PublishError("GOOGLE_DOC_ID is not set")
 
     data = load_pulse(ARTIFACTS, week)
-    md = load_pulse_md(ARTIFACTS, week)
-    if data is None or md is None:
+    if data is None:
         detail = "No pulse report yet"
         if week is not None:
             detail = f"No pulse for week ending {week.isoformat()}"
         raise FileNotFoundError(detail)
 
     pulse = Pulse.model_validate(data)
+    # Always render from the selected week's pulse.json so the Doc matches the UI
+    # (do not rely on pulse.md, which can be missing/stale for archive weeks).
+    md = render_pulse_md(pulse)
+    if not md.strip():
+        raise FileNotFoundError(
+            f"Pulse for week ending {pulse.week_ending.isoformat()} has no content to append"
+        )
+
     pub = append_pulse_to_google_doc(pulse, md, settings)
     update_pulse_artifact_with_publish(ARTIFACTS, pulse, pub)
     return {
@@ -64,6 +73,7 @@ def _publish_doc_for_week(week) -> dict:
         "doc_url": pub.doc_url,
         "week_ending": pulse.week_ending.isoformat(),
         "message": "Pulse appended to Google Doc",
+        "chars": len(md),
     }
 
 

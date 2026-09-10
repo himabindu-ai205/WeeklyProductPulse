@@ -512,8 +512,14 @@
           docTab = null;
         }
 
-        const weekQ = state.selectedWeekEnding
-          ? `?week_ending=${encodeURIComponent(state.selectedWeekEnding)}`
+        // Prefer the week currently shown on the dashboard.
+        const weekEnding =
+          state.selectedWeekEnding ||
+          state.pulse?.week_ending ||
+          pulse?.week_ending ||
+          "";
+        const weekQ = weekEnding
+          ? `?week_ending=${encodeURIComponent(weekEnding)}`
           : "";
         try {
           const res = await fetch(`/api/publish-doc${weekQ}`, {

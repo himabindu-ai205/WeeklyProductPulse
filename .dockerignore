@@ -19,6 +19,8 @@ stitch_weekly_review_pulse_dashboard
 requirements.txt
 *.md
 !data/exports/README.md
+!data/artifacts/**/*.md
+!data/artifacts/*.md
 
 # Keep pulse artifacts for the dashboard; drop bulky intermediate files
 data/exports/*.csv

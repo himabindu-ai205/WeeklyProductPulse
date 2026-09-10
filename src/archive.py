@@ -152,16 +152,37 @@ def format_range_label(from_d: date, to_d: date) -> str:
     return f"{months[from_d.month - 1]} {from_d.day} – {to_d.day}, {to_d.year}"
 
 
+def _latest_week_key(artifacts_dir: Path) -> str | None:
+    path = artifacts_dir / "pulse.json"
+    keys: list[str] = []
+    if path.is_file():
+        try:
+            key = str(json.loads(path.read_text(encoding="utf-8")).get("week_ending") or "")[
+                :10
+            ]
+            if key:
+                keys.append(key)
+        except json.JSONDecodeError:
+            pass
+    root = history_root(artifacts_dir)
+    if root.is_dir():
+        for child in root.iterdir():
+            if child.is_dir() and (child / "pulse.json").is_file():
+                try:
+                    date.fromisoformat(child.name[:10])
+                    keys.append(child.name[:10])
+                except ValueError:
+                    continue
+    return max(keys) if keys else None
+
+
 def _anchor_week_ending(artifacts_dir: Path) -> date:
     ensure_latest_archived(artifacts_dir)
-    latest = artifacts_dir / "pulse.json"
-    if latest.is_file():
+    latest_key = _latest_week_key(artifacts_dir)
+    if latest_key:
         try:
-            payload = json.loads(latest.read_text(encoding="utf-8"))
-            raw = str(payload.get("week_ending") or "")[:10]
-            if raw:
-                return date.fromisoformat(raw)
-        except (json.JSONDecodeError, ValueError):
+            return date.fromisoformat(latest_key)
+        except ValueError:
             pass
     today = date.today()
     return today - timedelta(days=(today.weekday() + 2) % 7)
@@ -173,19 +194,6 @@ def pulse_available(artifacts_dir: Path, week_ending: date) -> bool:
     return _latest_week_key(artifacts_dir) == week_ending.isoformat() and (
         artifacts_dir / "pulse.json"
     ).is_file()
-
-
-def _latest_week_key(artifacts_dir: Path) -> str | None:
-    path = artifacts_dir / "pulse.json"
-    if not path.is_file():
-        return None
-    try:
-        key = str(json.loads(path.read_text(encoding="utf-8")).get("week_ending") or "")[
-            :10
-        ]
-        return key or None
-    except json.JSONDecodeError:
-        return None
 
 
 def list_period_weeks(

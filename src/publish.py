@@ -326,6 +326,15 @@ def draft_email(
         return None, str(e)
 
 
+def build_doc_append_content(md: str, *, week_key: str, doc_title: str) -> str:
+    """Build Docs append payload: week separator + pulse body (no duplicate H1)."""
+    body = (md or "").rstrip()
+    title_line = f"# {doc_title.format(week_ending=week_key)}"
+    if body.lstrip().startswith("# Weekly Review Pulse"):
+        return f"\n\n---\n\n{body}\n"
+    return f"\n\n---\n\n{title_line}\n\n{body}\n"
+
+
 def publish_pulse(
     pulse: Pulse,
     md: str,
@@ -366,11 +375,8 @@ def publish_pulse(
             "Create a Doc once and set GOOGLE_DOC_ID in .env."
         )
     else:
-        # Week banner so appends are scannable
-        content = (
-            f"\n\n---\n"
-            f"# {app.delivery.doc_title.format(week_ending=week_key)}\n\n"
-            f"{md.rstrip()}\n"
+        content = build_doc_append_content(
+            md, week_key=week_key, doc_title=app.delivery.doc_title
         )
         doc_id, doc_url, err = publish_doc(
             resolved, document_id=document_id, content=content
@@ -448,10 +454,8 @@ def append_pulse_to_google_doc(
             + ", ".join(names or ["(none)"])
         )
 
-    content = (
-        f"\n\n---\n"
-        f"# {app.delivery.doc_title.format(week_ending=week_key)}\n\n"
-        f"{md.rstrip()}\n"
+    content = build_doc_append_content(
+        md, week_key=week_key, doc_title=app.delivery.doc_title
     )
     doc_id, doc_url, err = publish_doc(
         resolved, document_id=document_id, content=content
