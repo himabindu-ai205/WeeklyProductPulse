@@ -16,6 +16,8 @@
       product_name: "Groww",
       email_subject: "Weekly Review Pulse — Groww — {week_ending}",
       default_recipient: "",
+      google_doc_url: null,
+      google_doc_configured: false,
     },
     error: null,
     missingWeek: null,
@@ -428,44 +430,50 @@
         </section>
 
         <section class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm mb-space-xl">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-xs mb-space-md">
+          <div class="flex flex-col gap-space-md mb-space-md">
             <div>
               <div class="flex items-center gap-space-xs">
                 <h2 class="font-headline-md text-headline-md font-bold text-on-surface">Share</h2>
                 <span class="font-label-sm text-label-sm font-semibold text-secondary uppercase bg-surface-container px-space-xs py-0.5 rounded">Internal only</span>
               </div>
-              <p class="font-body-sm text-body-sm text-secondary mt-0.5">Add to your Google Doc, copy a link, download the note, or draft email.</p>
+              <p class="font-body-sm text-body-sm text-secondary mt-0.5 max-w-2xl">
+                Open the Google Doc, append this week’s pulse, copy the note to paste elsewhere, download a text file, or draft an email below.
+              </p>
             </div>
-            <div class="flex items-center gap-space-xs">
-              <button type="button" id="add-doc-btn" class="inline-flex items-center gap-1.5 px-space-sm py-1.5 rounded-full bg-surface-container-low hover:bg-surface-container-high text-on-surface font-label-md text-label-md font-semibold disabled:opacity-50 disabled:pointer-events-none">
-                <span class="material-symbols-outlined text-sm text-secondary">description</span>
+            <div class="flex flex-wrap items-stretch gap-2">
+              <button type="button" id="open-doc-btn" class="share-action-btn">
+                <span class="material-symbols-outlined text-[18px] text-secondary">open_in_new</span>
+                <span>Open Google Doc</span>
+              </button>
+              <button type="button" id="add-doc-btn" class="share-action-btn disabled:opacity-50 disabled:pointer-events-none">
+                <span class="material-symbols-outlined text-[18px] text-secondary">note_add</span>
                 <span id="add-doc-btn-text">Add to Google Doc</span>
               </button>
-              <button type="button" id="copy-link-btn" class="inline-flex items-center gap-1.5 px-space-sm py-1.5 rounded-full bg-surface-container-low hover:bg-surface-container-high text-on-surface font-label-md text-label-md font-semibold">
-                <span class="material-symbols-outlined text-sm text-secondary">link</span>
-                <span id="copy-btn-text">Copy link</span>
+              <button type="button" id="copy-note-btn" class="share-action-btn">
+                <span class="material-symbols-outlined text-[18px] text-secondary">content_copy</span>
+                <span id="copy-note-btn-text">Copy note</span>
               </button>
-              <button type="button" id="download-md-btn" class="inline-flex items-center gap-1.5 px-space-sm py-1.5 rounded-full bg-surface-container-low hover:bg-surface-container-high text-on-surface font-label-md text-label-md font-semibold">
-                <span class="material-symbols-outlined text-sm text-secondary">download</span>
-                <span>Download .md</span>
+              <button type="button" id="download-note-btn" class="share-action-btn">
+                <span class="material-symbols-outlined text-[18px] text-secondary">download</span>
+                <span>Download</span>
               </button>
             </div>
           </div>
           <div class="bg-surface-container-low p-space-md rounded-lg flex flex-col gap-space-sm">
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-space-xs">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <div class="relative flex-1">
                 <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-tertiary text-base">mail</span>
                 <label class="sr-only" for="email-target">Recipient email</label>
-                <input id="email-target" class="w-full bg-surface-container-lowest text-on-surface font-body-md text-body-md pl-9 pr-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-tertiary" type="email" value="" placeholder="name@company.com" autocomplete="off" required>
+                <input id="email-target" class="w-full min-h-[44px] bg-surface-container-lowest text-on-surface font-body-md text-body-md pl-9 pr-3 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-tertiary" type="email" value="" placeholder="name@company.com" autocomplete="off" required>
               </div>
-              <button type="button" id="draft-email-btn" class="inline-flex items-center justify-center gap-2 px-space-lg py-2 rounded-full bg-primary hover:bg-primary-container text-on-primary font-headline-sm text-label-md font-semibold active:scale-[0.98]">
-                <span class="material-symbols-outlined text-base">outgoing_mail</span>
+              <button type="button" id="draft-email-btn" class="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2.5 rounded-full bg-primary hover:bg-primary-container text-on-primary font-headline-sm text-label-md font-semibold active:scale-[0.98] whitespace-nowrap">
+                <span class="material-symbols-outlined text-[18px]">outgoing_mail</span>
                 <span>Create email draft</span>
               </button>
             </div>
-            <div class="flex items-center justify-between text-tertiary font-body-sm text-body-sm">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-tertiary font-body-sm text-body-sm">
               <span>Opens Gmail compose (or your mail app). Nothing is sent until you send it.</span>
-              <span class="font-label-sm text-label-sm hidden sm:inline">Draft for week ending ${escapeHtml(formatShort(pulse.week_ending))}</span>
+              <span class="font-label-sm text-label-sm">Draft for week ending ${escapeHtml(formatShort(pulse.week_ending))}</span>
             </div>
           </div>
         </section>
@@ -608,42 +616,84 @@
       });
     }
 
-    const copyBtn = $("copy-link-btn");
-    const copyText = $("copy-btn-text");
-    if (copyBtn) {
-      copyBtn.addEventListener("click", async () => {
-        const url = shareUrl(pulse);
-        try {
-          await navigator.clipboard.writeText(url);
-        } catch {
-          /* ignore */
+    const weekEndingForNote =
+      state.selectedWeekEnding || state.pulse?.week_ending || pulse?.week_ending || "";
+    const weekQForNote = weekEndingForNote
+      ? `?week_ending=${encodeURIComponent(weekEndingForNote)}`
+      : "";
+
+    async function fetchNoteText() {
+      const res = await fetch(`/api/pulse.md${weekQForNote}`, { cache: "no-store" });
+      if (!res.ok) throw new Error("note unavailable");
+      return res.text();
+    }
+
+    function noteToPlain(md) {
+      return String(md || "")
+        .replace(/^#{1,6}\s+/gm, "")
+        .replace(/\*\*(.*?)\*\*/g, "$1")
+        .replace(/^>\s?/gm, "")
+        .replace(/\r\n/g, "\n")
+        .trim();
+    }
+
+    const openDocBtn = $("open-doc-btn");
+    if (openDocBtn) {
+      openDocBtn.addEventListener("click", () => {
+        const url =
+          (state.pulse && state.pulse.doc_url) ||
+          pulse.doc_url ||
+          state.meta.google_doc_url ||
+          "";
+        if (!url) {
+          openModal(
+            "No Google Doc is configured yet. Set GOOGLE_DOC_ID on the server, or use Add to Google Doc first.",
+            "Could not open Doc"
+          );
+          return;
         }
-        if (copyText) {
-          copyText.textContent = "Copied!";
-          setTimeout(() => {
-            copyText.textContent = "Copy link";
-          }, 2000);
+        window.open(url, "weekly-pulse-google-doc");
+      });
+    }
+
+    const copyNoteBtn = $("copy-note-btn");
+    const copyNoteText = $("copy-note-btn-text");
+    if (copyNoteBtn) {
+      copyNoteBtn.addEventListener("click", async () => {
+        const label = copyNoteText?.textContent || "Copy note";
+        try {
+          const md = await fetchNoteText();
+          const plain = noteToPlain(md);
+          await navigator.clipboard.writeText(plain);
+          if (copyNoteText) {
+            copyNoteText.textContent = "Copied!";
+            setTimeout(() => {
+              copyNoteText.textContent = label;
+            }, 2000);
+          }
+        } catch {
+          openModal("Could not copy this week’s note.", "Copy failed");
         }
       });
     }
 
-    const downloadBtn = $("download-md-btn");
+    const downloadBtn = $("download-note-btn");
     if (downloadBtn) {
       downloadBtn.addEventListener("click", async () => {
-        const weekQ = state.selectedWeekEnding
-          ? `?week_ending=${encodeURIComponent(state.selectedWeekEnding)}`
-          : "";
-        const res = await fetch(`/api/pulse.md${weekQ}`, { cache: "no-store" });
-        if (!res.ok) return;
-        const text = await res.text();
-        const iso = toIsoWeekString(parseDate(pulse.week_ending));
-        const blob = new Blob([text], { type: "text/markdown" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `Groww_Pulse_${iso}.md`;
-        a.click();
-        URL.revokeObjectURL(url);
+        try {
+          const md = await fetchNoteText();
+          const plain = noteToPlain(md);
+          const iso = toIsoWeekString(parseDate(pulse.week_ending));
+          const blob = new Blob([plain + "\n"], { type: "text/plain;charset=utf-8" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `Groww_Pulse_${iso}.txt`;
+          a.click();
+          URL.revokeObjectURL(url);
+        } catch {
+          openModal("Could not download this week’s note.", "Download failed");
+        }
       });
     }
 

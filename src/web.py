@@ -165,12 +165,16 @@ class _JsonMixin:
     def _send_meta(self) -> None:
         try:
             settings = load_settings()
+            doc_id = settings.env.google_doc_id
             payload = {
                 "product_name": settings.app.product_name,
                 "email_subject": settings.app.delivery.email_subject,
                 "default_recipient": settings.app.delivery.recipient,
-                "google_doc_configured": bool(settings.env.google_doc_id),
+                "google_doc_configured": bool(doc_id),
                 "mcp_configured": bool(settings.env.mcp_http_token),
+                "google_doc_url": (
+                    f"https://docs.google.com/document/d/{doc_id}/edit" if doc_id else None
+                ),
             }
         except Exception:  # noqa: BLE001
             payload = {
@@ -179,6 +183,7 @@ class _JsonMixin:
                 "default_recipient": "",
                 "google_doc_configured": False,
                 "mcp_configured": False,
+                "google_doc_url": None,
             }
         self._send_json(payload)
 
