@@ -94,12 +94,28 @@
     return Math.max(1, Math.round(days / 7));
   }
 
+  function latestWeekEnding() {
+    const weeks = state.weeks || [];
+    const marked = weeks.find((w) => w.is_latest && w.week_ending);
+    if (marked?.week_ending) return marked.week_ending;
+    const available = weeks
+      .filter((w) => w.available && w.week_ending)
+      .map((w) => w.week_ending)
+      .sort()
+      .reverse();
+    if (available[0]) return available[0];
+    return state.pulse?.week_ending || null;
+  }
+
   function weeksBehind(pulse) {
     const ending = pulse.week_ending;
     if (!ending) return 0;
+    const latest = latestWeekEnding();
+    if (!latest) return 0;
+    // How many reporting weeks older than the newest available pulse
     const pulseWeek = toIsoWeekString(parseDate(ending));
-    const nowWeek = toIsoWeekString(new Date());
-    const diff = compareIsoWeek(nowWeek, pulseWeek);
+    const latestWeek = toIsoWeekString(parseDate(latest));
+    const diff = compareIsoWeek(latestWeek, pulseWeek);
     return Math.max(0, diff);
   }
 
@@ -293,10 +309,15 @@
     const top = (pulse.top_themes || [])[0];
     const topTrend = top ? (TREND[top.trend] || TREND.steady) : TREND.steady;
     const weeks = corpusWeeks(pulse);
+    const latestSlot = (state.weeks || []).find((w) => w.is_latest) || null;
+    const latestLabel = latestSlot
+      ? latestSlot.label || formatRange(latestSlot.from, latestSlot.to)
+      : "the latest report";
+
     const readyBadge = behind === 0
       ? `<div class="inline-flex items-center gap-1.5 px-space-sm py-1 rounded-full bg-surface-container text-[#3D8C5C]">
            <span class="w-2 h-2 rounded-full bg-[#3D8C5C]"></span>
-           <span class="font-label-sm text-label-sm font-semibold uppercase tracking-wide">Report ready</span>
+           <span class="font-label-sm text-label-sm font-semibold uppercase tracking-wide">Latest week</span>
          </div>`
       : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed-variant font-label-sm text-label-sm font-semibold tracking-wider uppercase">
            <span class="material-symbols-outlined text-[13px]">history</span>
@@ -307,7 +328,7 @@
       ? `<div class="flex items-center gap-space-sm px-space-md py-2.5 rounded-xl bg-primary-fixed/40 text-on-surface-variant mb-space-lg">
            <span class="material-symbols-outlined text-primary text-[20px] flex-shrink-0">info</span>
            <p class="font-body-sm text-body-sm leading-tight text-on-surface">
-             <strong class="font-semibold text-primary">Archive view</strong> — this pulse is ${behind} week${behind === 1 ? "" : "s"} behind the current ISO week.
+             <strong class="font-semibold text-primary">Archive view</strong> — this pulse is ${behind} week${behind === 1 ? "" : "s"} behind the latest report (${escapeHtml(latestLabel)}).
            </p>
          </div>`
       : "";
