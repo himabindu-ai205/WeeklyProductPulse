@@ -502,6 +502,16 @@
         const label = addDocText?.textContent || "Add to Google Doc";
         addDocBtn.disabled = true;
         if (addDocText) addDocText.textContent = "Adding…";
+
+        // Open during the click gesture so the Doc never replaces this tab.
+        // Named window reuses one Doc tab across clicks.
+        let docTab = null;
+        try {
+          docTab = window.open("about:blank", "weekly-pulse-google-doc");
+        } catch {
+          docTab = null;
+        }
+
         const weekQ = state.selectedWeekEnding
           ? `?week_ending=${encodeURIComponent(state.selectedWeekEnding)}`
           : "";
@@ -513,6 +523,11 @@
           });
           const data = await res.json().catch(() => ({}));
           if (!res.ok || !data.ok) {
+            try {
+              docTab?.close();
+            } catch {
+              /* ignore */
+            }
             openModal(data.detail || "Could not add pulse to Google Doc.", "Could not add to Doc");
             if (addDocText) addDocText.textContent = label;
             addDocBtn.disabled = false;
@@ -522,14 +537,43 @@
             state.pulse.doc_url = data.doc_url;
           }
           if (addDocText) addDocText.textContent = "Added!";
+
           if (data.doc_url) {
-            window.open(data.doc_url, "_blank", "noopener,noreferrer");
+            if (docTab && !docTab.closed) {
+              try {
+                docTab.opener = null;
+              } catch {
+                /* ignore */
+              }
+              docTab.location.href = data.doc_url;
+            } else {
+              // Popup blocked — use a temporary <a target=_blank> so this tab stays put.
+              const a = document.createElement("a");
+              a.href = data.doc_url;
+              a.target = "_blank";
+              a.rel = "noopener noreferrer";
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+            }
+          } else {
+            try {
+              docTab?.close();
+            } catch {
+              /* ignore */
+            }
           }
+
           setTimeout(() => {
             if (addDocText) addDocText.textContent = label;
             addDocBtn.disabled = false;
           }, 2000);
         } catch {
+          try {
+            docTab?.close();
+          } catch {
+            /* ignore */
+          }
           openModal("Could not reach the server to add to Google Doc.", "Could not add to Doc");
           if (addDocText) addDocText.textContent = label;
           addDocBtn.disabled = false;
