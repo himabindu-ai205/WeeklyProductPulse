@@ -186,8 +186,10 @@ def save_doc_registry(path: Path, registry: dict[str, str]) -> None:
 
 
 def build_email_body(pulse: Pulse, md: str, doc_url: str | None, mode: str) -> str:
-    """Stakeholder email body (themes + actions). ``md`` kept for callers/compat."""
-    _ = md  # full markdown is for Docs; email uses a short stakeholder brief
+    """Stakeholder email body (themes + actions). No Doc/dashboard links."""
+    _ = md
+    _ = doc_url
+    _ = mode
     week = pulse.week_ending.isoformat()
     avg = (
         f"{pulse.avg_rating_week:.1f}★"
@@ -211,22 +213,6 @@ def build_email_body(pulse: Pulse, md: str, doc_url: str | None, mode: str) -> s
     themes_section = "\n\n".join(theme_blocks) if theme_blocks else "No themes available."
     actions_section = "\n\n".join(action_blocks) if action_blocks else "No action items available."
 
-    if mode == "link_only" and doc_url:
-        return (
-            f"Dear Sir/Madam,\n\n"
-            f"Please find the Weekly Review Pulse for {pulse.product_name} "
-            f"for the week ending {week}.\n\n"
-            f"View the note: {doc_url}\n\n"
-            f"Regards\n"
-            f"Weekly Review Pulse\n"
-        )
-
-    doc_line = (
-        f"Full note in Google Docs: {doc_url}"
-        if doc_url
-        else "Full note: available on the Weekly Review Pulse dashboard."
-    )
-
     return (
         f"Dear Sir/Madam,\n\n"
         f"Please find the highlights of the Weekly Review Pulse for {pulse.product_name} "
@@ -236,7 +222,6 @@ def build_email_body(pulse: Pulse, md: str, doc_url: str | None, mode: str) -> s
         f"{themes_section}\n\n"
         f"Action items\n"
         f"{actions_section}\n\n"
-        f"{doc_line}\n\n"
         f"Regards\n"
         f"Weekly Review Pulse\n"
     )

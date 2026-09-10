@@ -731,15 +731,6 @@
           })
           .join("\n\n");
 
-        const docUrl =
-          (state.pulse && state.pulse.doc_url) ||
-          pulse.doc_url ||
-          state.meta.google_doc_url ||
-          "";
-        const docLine = docUrl
-          ? `Full note in Google Docs: ${docUrl}`
-          : `Dashboard: ${shareUrl(pulse)}`;
-
         const body =
           `Dear Sir/Madam,\n\n` +
           `Please find the highlights of the Weekly Review Pulse for ${pulse.product_name} ` +
@@ -749,7 +740,6 @@
           `${themeBlocks || "No themes available."}\n\n` +
           `Action items\n` +
           `${actionBlocks || "No action items available."}\n\n` +
-          `${docLine}\n\n` +
           `Regards\n` +
           `Weekly Review Pulse\n`;
 

@@ -147,7 +147,8 @@ class TestPublishPulse:
         assert "2026-09-05" in draft.calls[0]["subject"]
         assert "Dear Sir/Madam" in draft.calls[0]["body"]
         assert "UPI failures rose" in draft.calls[0]["body"]
-        assert "DOC123" in draft.calls[0]["body"]
+        assert "DOC123" not in draft.calls[0]["body"]
+        assert "http" not in draft.calls[0]["body"]
 
         registry = (tmp_path / "doc_registry.json").read_text(encoding="utf-8")
         assert "2026-09-05" in registry
@@ -202,7 +203,8 @@ class TestPublishPulse:
         assert any("Docs append failed" in w for w in result.warnings)
         assert "Dear Sir/Madam" in draft.calls[0]["body"]
         assert "UPI failures rose" in draft.calls[0]["body"]
-        assert "dashboard" in draft.calls[0]["body"].lower()
+        assert "http" not in draft.calls[0]["body"]
+        assert "docs.google" not in draft.calls[0]["body"]
 
     def test_gmail_hard_fail(self, tmp_path: Path):
         append = FakeTool(
@@ -323,9 +325,9 @@ class TestParsePayload:
 
 
 class TestEmailBody:
-    def test_stakeholder_brief_without_doc_url(self):
+    def test_stakeholder_brief_without_links(self):
         pulse = _minimal_pulse()
-        body = build_email_body(pulse, MD, None, "full_note_plus_link")
+        body = build_email_body(pulse, MD, "https://docs.google.com/document/d/X/edit", "full_note_plus_link")
         assert "Dear Sir/Madam" in body
         assert "Top themes" in body
         assert "Payments & UPI" in body
@@ -333,14 +335,17 @@ class TestEmailBody:
         assert "Action items" in body
         assert "Investigate UPI" in body
         assert "Regards" in body
+        assert "http" not in body
+        assert "docs.google.com" not in body
         assert "Weekly Review Pulse — Groww — week ending" not in body.split("\n")[0]
 
-    def test_link_only_with_url(self):
+    def test_link_only_also_omits_urls(self):
         pulse = _minimal_pulse()
         body = build_email_body(
             pulse, MD, "https://docs.google.com/document/d/X/edit", "link_only"
         )
         assert "Dear Sir/Madam" in body
-        assert "document/d/X" in body
-        assert "UPI failures rose" not in body
+        assert "document/d/X" not in body
+        assert "http" not in body
+        assert "UPI failures rose" in body
         assert "Regards" in body
