@@ -30,7 +30,7 @@ note:
 delivery:
   recipient: ""
   doc_title: "Weekly Review Pulse — Groww — {week_ending}"
-  email_subject: "Weekly Review Pulse — Groww — {week_ending}"
+  email_subject: "Groww Weekly Review Pulse — week ending {week_ending}"
   email_body_mode: "full_note_plus_link"   # full_note_plus_link | link_only
 
 limits:

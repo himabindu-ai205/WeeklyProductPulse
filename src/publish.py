@@ -186,16 +186,60 @@ def save_doc_registry(path: Path, registry: dict[str, str]) -> None:
 
 
 def build_email_body(pulse: Pulse, md: str, doc_url: str | None, mode: str) -> str:
-    link_line = f"View in Google Docs: {doc_url}" if doc_url else "View in Google Docs: (unavailable)"
-    # link_only with no Doc URL would be an empty pointer — fall back to full note
+    """Stakeholder email body (themes + actions). ``md`` kept for callers/compat."""
+    _ = md  # full markdown is for Docs; email uses a short stakeholder brief
+    week = pulse.week_ending.isoformat()
+    avg = (
+        f"{pulse.avg_rating_week:.1f}★"
+        if pulse.avg_rating_week is not None
+        else "n/a"
+    )
+
+    theme_blocks: list[str] = []
+    for i, t in enumerate(pulse.top_themes, start=1):
+        summary = (t.summary or "").strip() or "No summary available."
+        theme_blocks.append(f"{i}. {t.label}\n   {summary}")
+
+    action_blocks: list[str] = []
+    for i, a in enumerate(pulse.actions, start=1):
+        detail = (a.detail or "").strip()
+        if detail:
+            action_blocks.append(f"{i}. {a.title}\n   {detail}")
+        else:
+            action_blocks.append(f"{i}. {a.title}")
+
+    themes_section = "\n\n".join(theme_blocks) if theme_blocks else "No themes available."
+    actions_section = "\n\n".join(action_blocks) if action_blocks else "No action items available."
+
     if mode == "link_only" and doc_url:
-        themes = ", ".join(t.label for t in pulse.top_themes) or "n/a"
         return (
-            f"Weekly Review Pulse — {pulse.product_name} — {pulse.week_ending.isoformat()}\n"
-            f"Top themes: {themes}\n"
-            f"{link_line}\n"
+            f"Dear Sir/Madam,\n\n"
+            f"Please find the Weekly Review Pulse for {pulse.product_name} "
+            f"for the week ending {week}.\n\n"
+            f"View the note: {doc_url}\n\n"
+            f"Regards\n"
+            f"Weekly Review Pulse\n"
         )
-    return f"{md.rstrip()}\n\n{link_line}\n"
+
+    doc_line = (
+        f"Full note in Google Docs: {doc_url}"
+        if doc_url
+        else "Full note: available on the Weekly Review Pulse dashboard."
+    )
+
+    return (
+        f"Dear Sir/Madam,\n\n"
+        f"Please find the highlights of the Weekly Review Pulse for {pulse.product_name} "
+        f"for the week ending {week}.\n\n"
+        f"Snapshot: average rating {avg} · {pulse.review_count_week} Play Store reviews\n\n"
+        f"Top themes\n"
+        f"{themes_section}\n\n"
+        f"Action items\n"
+        f"{actions_section}\n\n"
+        f"{doc_line}\n\n"
+        f"Regards\n"
+        f"Weekly Review Pulse\n"
+    )
 
 
 def doc_url_for_id(document_id: str) -> str:

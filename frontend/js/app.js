@@ -14,7 +14,7 @@
     selectedWeekEnding: null,
     meta: {
       product_name: "Groww",
-      email_subject: "Weekly Review Pulse — Groww — {week_ending}",
+      email_subject: "Groww Weekly Review Pulse — week ending {week_ending}",
       default_recipient: "",
       google_doc_url: null,
       google_doc_configured: false,
@@ -710,14 +710,48 @@
         }
         emailInput?.setCustomValidity("");
         const ending = formatShort(pulse.week_ending);
-        const subject = (state.meta.email_subject || "Weekly Review Pulse — Groww — {week_ending}")
-          .replace("{week_ending}", pulse.week_ending);
-        const themes = (pulse.top_themes || []).map((t) => t.label).join(", ");
+        const subject = (
+          state.meta.email_subject ||
+          "Groww Weekly Review Pulse — week ending {week_ending}"
+        ).replace("{week_ending}", pulse.week_ending);
+
+        const themeBlocks = (pulse.top_themes || [])
+          .map((t, i) => {
+            const summary = (t.summary || "").trim() || "No summary available.";
+            return `${i + 1}. ${t.label}\n   ${summary}`;
+          })
+          .join("\n\n");
+
+        const actionBlocks = (pulse.actions || [])
+          .map((a, i) => {
+            const detail = (a.detail || "").trim();
+            return detail
+              ? `${i + 1}. ${a.title}\n   ${detail}`
+              : `${i + 1}. ${a.title}`;
+          })
+          .join("\n\n");
+
+        const docUrl =
+          (state.pulse && state.pulse.doc_url) ||
+          pulse.doc_url ||
+          state.meta.google_doc_url ||
+          "";
+        const docLine = docUrl
+          ? `Full note in Google Docs: ${docUrl}`
+          : `Dashboard: ${shareUrl(pulse)}`;
+
         const body =
-          `Weekly Review Pulse — ${pulse.product_name} — week ending ${pulse.week_ending}\n` +
-          `Avg rating: ${stars(pulse.avg_rating_week)}★ · ${pulse.review_count_week} reviews\n` +
-          `Top themes: ${themes}\n\n` +
-          `${shareUrl(pulse)}\n`;
+          `Dear Sir/Madam,\n\n` +
+          `Please find the highlights of the Weekly Review Pulse for ${pulse.product_name} ` +
+          `for the week ending ${pulse.week_ending}.\n\n` +
+          `Snapshot: average rating ${stars(pulse.avg_rating_week)}★ · ${pulse.review_count_week} Play Store reviews\n\n` +
+          `Top themes\n` +
+          `${themeBlocks || "No themes available."}\n\n` +
+          `Action items\n` +
+          `${actionBlocks || "No action items available."}\n\n` +
+          `${docLine}\n\n` +
+          `Regards\n` +
+          `Weekly Review Pulse\n`;
 
         // Prefer Gmail compose in a new tab (works without a desktop mail client).
         const gmail =

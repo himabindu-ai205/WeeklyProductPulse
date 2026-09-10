@@ -179,7 +179,7 @@ class _JsonMixin:
         except Exception:  # noqa: BLE001
             payload = {
                 "product_name": "Groww",
-                "email_subject": "Weekly Review Pulse — Groww — {week_ending}",
+                "email_subject": "Groww Weekly Review Pulse — week ending {week_ending}",
                 "default_recipient": "",
                 "google_doc_configured": False,
                 "mcp_configured": False,

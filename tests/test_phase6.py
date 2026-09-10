@@ -145,7 +145,8 @@ class TestPublishPulse:
         assert len(draft.calls) == 1
         assert draft.calls[0]["to"] == [settings.app.delivery.recipient]
         assert "2026-09-05" in draft.calls[0]["subject"]
-        assert "Payments issues rose" in draft.calls[0]["body"]
+        assert "Dear Sir/Madam" in draft.calls[0]["body"]
+        assert "UPI failures rose" in draft.calls[0]["body"]
         assert "DOC123" in draft.calls[0]["body"]
 
         registry = (tmp_path / "doc_registry.json").read_text(encoding="utf-8")
@@ -199,8 +200,9 @@ class TestPublishPulse:
         assert result.gmail_ok is True
         assert result.draft_id == "D3"
         assert any("Docs append failed" in w for w in result.warnings)
-        assert "Payments issues rose" in draft.calls[0]["body"]
-        assert "unavailable" in draft.calls[0]["body"]
+        assert "Dear Sir/Madam" in draft.calls[0]["body"]
+        assert "UPI failures rose" in draft.calls[0]["body"]
+        assert "dashboard" in draft.calls[0]["body"].lower()
 
     def test_gmail_hard_fail(self, tmp_path: Path):
         append = FakeTool(
@@ -321,17 +323,24 @@ class TestParsePayload:
 
 
 class TestEmailBody:
-    def test_link_only_falls_back_without_url(self):
+    def test_stakeholder_brief_without_doc_url(self):
         pulse = _minimal_pulse()
-        body = build_email_body(pulse, MD, None, "link_only")
-        assert "Payments issues rose" in body
-        assert "unavailable" in body
+        body = build_email_body(pulse, MD, None, "full_note_plus_link")
+        assert "Dear Sir/Madam" in body
+        assert "Top themes" in body
+        assert "Payments & UPI" in body
+        assert "UPI failures rose" in body
+        assert "Action items" in body
+        assert "Investigate UPI" in body
+        assert "Regards" in body
+        assert "Weekly Review Pulse — Groww — week ending" not in body.split("\n")[0]
 
     def test_link_only_with_url(self):
         pulse = _minimal_pulse()
         body = build_email_body(
             pulse, MD, "https://docs.google.com/document/d/X/edit", "link_only"
         )
-        assert "Payments & UPI" in body
-        assert "Payments issues rose" not in body
+        assert "Dear Sir/Madam" in body
         assert "document/d/X" in body
+        assert "UPI failures rose" not in body
+        assert "Regards" in body
