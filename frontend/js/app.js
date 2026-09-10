@@ -366,9 +366,9 @@
               </select>
               <span class="material-symbols-outlined absolute right-2 text-tertiary pointer-events-none text-base">expand_more</span>
             </div>
-            <button type="button" id="refresh-btn" class="ml-space-2xs inline-flex items-center gap-1 px-space-sm py-1.5 rounded-full font-label-md text-label-md text-secondary hover:text-on-surface hover:bg-surface-container-high">
+            <button type="button" id="refresh-btn" class="ml-space-2xs inline-flex items-center gap-1 px-space-sm py-1.5 rounded-full font-label-md text-label-md text-secondary hover:text-on-surface hover:bg-surface-container-high disabled:opacity-60" title="Reload this week’s pulse from the server">
               <span class="material-symbols-outlined text-sm text-tertiary" id="refresh-icon">refresh</span>
-              <span>Refresh</span>
+              <span data-refresh-label>Refresh</span>
             </button>
           </div>
           <div class="flex items-center gap-space-xs">
@@ -507,9 +507,23 @@
     const refreshIcon = $("refresh-icon");
     if (refreshBtn) {
       refreshBtn.addEventListener("click", async () => {
+        if (refreshBtn.disabled) return;
+        const labelEl = refreshBtn.querySelector("[data-refresh-label]");
+        const prev = labelEl?.textContent || "Refresh";
+        refreshBtn.disabled = true;
         refreshIcon?.classList.add("animate-spin");
-        await load(true);
+        if (labelEl) labelEl.textContent = "Refreshing…";
+        try {
+          await load(true);
+          if (labelEl) labelEl.textContent = "Updated";
+        } catch {
+          if (labelEl) labelEl.textContent = "Failed";
+        }
         refreshIcon?.classList.remove("animate-spin");
+        setTimeout(() => {
+          if (labelEl) labelEl.textContent = prev;
+          refreshBtn.disabled = false;
+        }, 1200);
       });
     }
 
