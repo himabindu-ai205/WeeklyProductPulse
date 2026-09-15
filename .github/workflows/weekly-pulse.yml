@@ -71,10 +71,11 @@ jobs:
           GOOGLE_DOC_ID: ${{ secrets.GOOGLE_DOC_ID }}
         run: |
           set -euo pipefail
-          # Prefer repo secret when set; otherwise free-tier default (8B).
+          # Prefer repo secret when set; otherwise free-tier default (20B).
+          # Force-migrate known-bad defaults (120B burns TPD; 8B not on free tier).
           MODEL="${PULSE_MODEL:-}"
-          if [ -z "${MODEL}" ] || [ "${MODEL}" = "openai/gpt-oss-120b" ]; then
-            MODEL="llama-3.1-8b-instant"
+          if [ -z "${MODEL}" ] || [ "${MODEL}" = "openai/gpt-oss-120b" ] || [ "${MODEL}" = "llama-3.1-8b-instant" ]; then
+            MODEL="openai/gpt-oss-20b"
           fi
           {
             echo "GROQ_API_KEY=${GROQ_API_KEY}"

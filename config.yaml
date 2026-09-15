@@ -37,7 +37,7 @@ delivery:
 limits:
   # Groq free-tier budgets we target:
   #   30 requests/min · 1K requests/day · 8K tokens/min · 200K tokens/day
-  # Pair with PULSE_MODEL=llama-3.1-8b-instant (see .env / Actions secret)
+  # Pair with PULSE_MODEL=openai/gpt-oss-20b (see .env / Actions secret)
   cluster_batch_size: 10
   cluster_max_attempts: 2
   generate_max_attempts: 3

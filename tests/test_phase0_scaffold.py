@@ -12,7 +12,7 @@ def test_phase0_config_loads():
     assert settings.app.note.max_words == 250
     # Scaffold must run without a model key
     assert settings.env.groq_api_key is None or isinstance(settings.env.groq_api_key, str)
-    assert settings.env.pulse_model == "llama-3.1-8b-instant" or isinstance(
+    assert settings.env.pulse_model == "openai/gpt-oss-20b" or isinstance(
         settings.env.pulse_model, str
     )
 

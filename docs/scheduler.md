@@ -19,7 +19,7 @@ Workflow: [`.github/workflows/weekly-pulse.yml`](../.github/workflows/weekly-pul
 | `MCP_HTTP_TOKEN` | Yes (unless skip publish) | Railway Google Workspace MCP |
 | `GOOGLE_DOC_ID` | Yes (unless skip publish) | Doc to append |
 | `MCP_SERVER_URL` | Optional | Defaults to Railway MCP URL |
-| `PULSE_MODEL` | Optional | Defaults to `llama-3.1-8b-instant` |
+| `PULSE_MODEL` | Optional | Defaults to `openai/gpt-oss-20b` |
 
 Set secrets under **Settings → Secrets and variables → Actions**.
 
