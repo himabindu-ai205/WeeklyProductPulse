@@ -135,7 +135,7 @@ jobs:
           echo "Pushed pulse history — Railway should redeploy with week ${WEEK}"
 
       - name: Redeploy Railway dashboard
-        if: success() && (secrets.RAILWAY_TOKEN != '' || secrets.RAILWAY_API_TOKEN != '')
+        if: success()
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
@@ -144,9 +144,12 @@ jobs:
           RAILWAY_ENVIRONMENT_ID: ${{ secrets.RAILWAY_ENVIRONMENT_ID }}
         run: |
           set -euo pipefail
-          # Prefer account API token when present (projectTokenCreate may be blocked for OAuth sessions)
           if [ -n "${RAILWAY_API_TOKEN:-}" ]; then
             export RAILWAY_TOKEN="${RAILWAY_API_TOKEN}"
+          fi
+          if [ -z "${RAILWAY_TOKEN:-}" ]; then
+            echo "RAILWAY_TOKEN not set — skipping dashboard redeploy"
+            exit 0
           fi
           npm install -g @railway/cli@5.2.0
           ARGS=(up -y --detach -m "Weekly pulse dashboard ${GITHUB_SHA}")
