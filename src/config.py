@@ -93,7 +93,7 @@ class EnvSettings(BaseModel):
     """Secrets and runtime env. API keys optional at scaffold."""
 
     groq_api_key: str | None = None
-    pulse_model: str = "openai/gpt-oss-120b"
+    pulse_model: str = "llama-3.1-8b-instant"
     # Railway Google Workspace MCP (Streamable HTTP)
     mcp_server_url: str = "https://mcp-server-production-f0ca.up.railway.app"
     mcp_http_token: str | None = None
@@ -146,7 +146,7 @@ def load_env_settings(dotenv_path: Path | None = None) -> EnvSettings:
 
     return EnvSettings(
         groq_api_key=os.getenv("GROQ_API_KEY") or None,
-        pulse_model=os.getenv("PULSE_MODEL", "openai/gpt-oss-120b"),
+        pulse_model=os.getenv("PULSE_MODEL", "llama-3.1-8b-instant"),
         mcp_server_url=os.getenv(
             "MCP_SERVER_URL", "https://mcp-server-production-f0ca.up.railway.app"
         ).rstrip("/"),

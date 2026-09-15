@@ -88,9 +88,9 @@ def invoke_structured(
 ) -> T:
     """Prefer LangChain ``with_structured_output``; fall back to JSON parse.
 
-    Groq ``openai/gpt-oss-120b`` can be finicky with structured output, so the
+    Groq structured output can be finicky on some models, so the
     JSON fallback keeps the pipeline reliable. Stubbed FakeLLM tests also rely
-    on the fallback path. Pass ``min_interval_seconds`` (e.g. 8) in live runs
+    on the fallback path. Pass ``min_interval_seconds`` (e.g. 4) in live runs
     to respect Groq RPM/TPM limits; 429s are retried with backoff.
     """
     # Unit-test FakeLLM should not sleep

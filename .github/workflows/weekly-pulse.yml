@@ -71,9 +71,14 @@ jobs:
           GOOGLE_DOC_ID: ${{ secrets.GOOGLE_DOC_ID }}
         run: |
           set -euo pipefail
+          # Prefer repo secret when set; otherwise free-tier default (8B).
+          MODEL="${PULSE_MODEL:-}"
+          if [ -z "${MODEL}" ] || [ "${MODEL}" = "openai/gpt-oss-120b" ]; then
+            MODEL="llama-3.1-8b-instant"
+          fi
           {
             echo "GROQ_API_KEY=${GROQ_API_KEY}"
-            echo "PULSE_MODEL=${PULSE_MODEL:-openai/gpt-oss-120b}"
+            echo "PULSE_MODEL=${MODEL}"
             echo "MCP_SERVER_URL=${MCP_SERVER_URL:-https://mcp-server-production-f0ca.up.railway.app}"
             echo "MCP_HTTP_TOKEN=${MCP_HTTP_TOKEN:-}"
             echo "GOOGLE_DOC_ID=${GOOGLE_DOC_ID:-}"

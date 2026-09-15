@@ -64,7 +64,7 @@ Fill in at least:
 | `GROQ_API_KEY` | Required for cluster/generate |
 | `MCP_HTTP_TOKEN` | Required to publish Docs/Gmail |
 | `GOOGLE_DOC_ID` | Existing Doc id (MCP appends; it cannot create Docs) |
-| `PULSE_MODEL` | Optional (default `openai/gpt-oss-120b`) |
+| `PULSE_MODEL` | Optional (default `llama-3.1-8b-instant`) |
 
 Behavioural knobs (windows, themes, schedule, empty `delivery.recipient` for a blank share field) live in [`config.yaml`](config.yaml).
 
