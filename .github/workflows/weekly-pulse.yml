@@ -135,23 +135,31 @@ jobs:
           echo "Pushed pulse history — Railway should redeploy with week ${WEEK}"
 
       - name: Redeploy Railway dashboard
-        if: success() && secrets.RAILWAY_TOKEN != ''
+        if: success() && (secrets.RAILWAY_TOKEN != '' || secrets.RAILWAY_API_TOKEN != '')
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
           RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
+          RAILWAY_ENVIRONMENT_ID: ${{ secrets.RAILWAY_ENVIRONMENT_ID }}
         run: |
           set -euo pipefail
-          npm install -g @railway/cli
-          # Deploy this workspace (includes freshly archived pulse) to production.
-          ARGS=(-y --detach -m "Weekly pulse dashboard ${GITHUB_SHA}")
+          # Prefer account API token when present (projectTokenCreate may be blocked for OAuth sessions)
+          if [ -n "${RAILWAY_API_TOKEN:-}" ]; then
+            export RAILWAY_TOKEN="${RAILWAY_API_TOKEN}"
+          fi
+          npm install -g @railway/cli@5.2.0
+          ARGS=(up -y --detach -m "Weekly pulse dashboard ${GITHUB_SHA}")
           if [ -n "${RAILWAY_PROJECT_ID:-}" ]; then
-            ARGS+=(-p "${RAILWAY_PROJECT_ID}")
+            ARGS+=(--project "${RAILWAY_PROJECT_ID}")
+          fi
+          if [ -n "${RAILWAY_ENVIRONMENT_ID:-}" ]; then
+            ARGS+=(--environment "${RAILWAY_ENVIRONMENT_ID}")
           fi
           if [ -n "${RAILWAY_SERVICE_ID:-}" ]; then
-            ARGS+=(-s "${RAILWAY_SERVICE_ID}")
+            ARGS+=(--service "${RAILWAY_SERVICE_ID}")
           fi
-          railway up "${ARGS[@]}"
+          railway "${ARGS[@]}"
           echo "Railway deploy triggered"
 
       - name: Upload artifacts

@@ -36,9 +36,10 @@ Optional Railway secrets (recommended so the site updates even without GitHub au
 
 | Secret | Purpose |
 | --- | --- |
-| `RAILWAY_TOKEN` | Account/project token for `railway up` |
-| `RAILWAY_PROJECT_ID` | Optional project id |
-| `RAILWAY_SERVICE_ID` | Optional service id (WeeklyProductPulse) |
+| `RAILWAY_TOKEN` | Project token for `railway up` (production) |
+| `RAILWAY_PROJECT_ID` | Project id |
+| `RAILWAY_SERVICE_ID` | Service id (WeeklyProductPulse) |
+| `RAILWAY_ENVIRONMENT_ID` | Environment id (production) |
 
 ## Local / OS scheduler
 
