@@ -134,6 +134,26 @@ jobs:
           git push origin "HEAD:${GITHUB_REF_NAME}"
           echo "Pushed pulse history — Railway should redeploy with week ${WEEK}"
 
+      - name: Redeploy Railway dashboard
+        if: success() && secrets.RAILWAY_TOKEN != ''
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+          RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
+        run: |
+          set -euo pipefail
+          npm install -g @railway/cli
+          # Deploy this workspace (includes freshly archived pulse) to production.
+          ARGS=(-y --detach -m "Weekly pulse dashboard ${GITHUB_SHA}")
+          if [ -n "${RAILWAY_PROJECT_ID:-}" ]; then
+            ARGS+=(-p "${RAILWAY_PROJECT_ID}")
+          fi
+          if [ -n "${RAILWAY_SERVICE_ID:-}" ]; then
+            ARGS+=(-s "${RAILWAY_SERVICE_ID}")
+          fi
+          railway up "${ARGS[@]}"
+          echo "Railway deploy triggered"
+
       - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v4

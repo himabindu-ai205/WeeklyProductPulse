@@ -196,18 +196,52 @@ def pulse_available(artifacts_dir: Path, week_ending: date) -> bool:
     ).is_file()
 
 
+def _archived_week_endings(artifacts_dir: Path) -> list[date]:
+    """Return week endings that have history (newest first)."""
+    root = history_root(artifacts_dir)
+    endings: list[date] = []
+    if root.is_dir():
+        for child in root.iterdir():
+            if not child.is_dir() or not (child / "pulse.json").is_file():
+                continue
+            try:
+                endings.append(date.fromisoformat(child.name[:10]))
+            except ValueError:
+                continue
+    endings.sort(reverse=True)
+    return endings
+
+
 def list_period_weeks(
     artifacts_dir: Path,
     *,
     count: int = PERIOD_WEEKS,
     reporting_days: int = 7,
 ) -> list[dict[str, Any]]:
-    """Return the latest ``count`` week endings (newest first) for the period dropdown."""
+    """Return the latest ``count`` week endings (newest first) for the period dropdown.
+
+    Prefer real ``history/<week_ending>/`` folders so the picker stays aligned with
+    archived pulses even when week-ending weekdays shift between runs.
+    """
     ensure_latest_archived(artifacts_dir)
-    anchor = _anchor_week_ending(artifacts_dir)
+    archived = _archived_week_endings(artifacts_dir)
+    endings: list[date] = list(archived[:count])
+
+    if len(endings) < count:
+        anchor = endings[0] if endings else _anchor_week_ending(artifacts_dir)
+        seen = {e.isoformat() for e in endings}
+        i = 0
+        while len(endings) < count:
+            candidate = anchor - timedelta(days=7 * i)
+            i += 1
+            key = candidate.isoformat()
+            if key in seen:
+                continue
+            seen.add(key)
+            endings.append(candidate)
+
     weeks: list[dict[str, Any]] = []
-    for i in range(count):
-        ending = anchor - timedelta(days=7 * i)
+    for i, ending in enumerate(endings):
         start, end = reporting_range(ending, reporting_days)
         weeks.append(
             {
@@ -228,10 +262,11 @@ def load_pulse(
 ) -> dict[str, Any] | None:
     ensure_latest_archived(artifacts_dir)
     if week_ending is None:
-        path = artifacts_dir / "pulse.json"
-        if not path.is_file():
+        # Top-level pulse.json can lag history (an older run wrote it last).
+        # The dashboard default must be the newest archived week.
+        week_ending = _latest_week_key(artifacts_dir)
+        if not week_ending:
             return None
-        return json.loads(path.read_text(encoding="utf-8"))
 
     if isinstance(week_ending, str):
         parsed = parse_week_ending(week_ending)
@@ -256,8 +291,9 @@ def load_pulse_md(
 ) -> str | None:
     ensure_latest_archived(artifacts_dir)
     if week_ending is None:
-        path = artifacts_dir / "pulse.md"
-        return path.read_text(encoding="utf-8") if path.is_file() else None
+        week_ending = _latest_week_key(artifacts_dir)
+        if not week_ending:
+            return None
 
     if isinstance(week_ending, str):
         parsed = parse_week_ending(week_ending)

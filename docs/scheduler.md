@@ -30,7 +30,15 @@ Set secrets under **Settings → Secrets and variables → Actions**.
 
 Artifacts from each run are uploaded as `weekly-pulse-<run_id>` (pulse JSON/MD, run log, export CSV, doc registry).
 
-After a **successful** run the workflow also **commits** `data/artifacts/pulse.json`, `pulse.md`, and `history/<week_ending>/` to `main`. Railway redeploys from that push so the dashboard period picker shows the new week.
+After a **successful** run the workflow also **commits** `data/artifacts/pulse.json`, `pulse.md`, and `history/<week_ending>/` to `main`, then (when configured) **redeploys Railway** so the dashboard period picker shows the new week.
+
+Optional Railway secrets (recommended so the site updates even without GitHub auto-deploy):
+
+| Secret | Purpose |
+| --- | --- |
+| `RAILWAY_TOKEN` | Account/project token for `railway up` |
+| `RAILWAY_PROJECT_ID` | Optional project id |
+| `RAILWAY_SERVICE_ID` | Optional service id (WeeklyProductPulse) |
 
 ## Local / OS scheduler
 
