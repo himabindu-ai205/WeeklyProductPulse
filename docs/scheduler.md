@@ -30,6 +30,8 @@ Set secrets under **Settings → Secrets and variables → Actions**.
 
 Artifacts from each run are uploaded as `weekly-pulse-<run_id>` (pulse JSON/MD, run log, export CSV, doc registry).
 
+After a **successful** run the workflow also **commits** `data/artifacts/pulse.json`, `pulse.md`, and `history/<week_ending>/` to `main`. Railway redeploys from that push so the dashboard period picker shows the new week.
+
 ## Local / OS scheduler
 
 ```powershell

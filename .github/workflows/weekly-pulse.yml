@@ -19,6 +19,10 @@ concurrency:
   group: weekly-review-pulse
   cancel-in-progress: false
 
+# Push archived pulse so Railway redeploy picks up dashboard history
+permissions:
+  contents: write
+
 jobs:
   weekly-pulse:
     name: Refresh → classify → report
@@ -103,6 +107,32 @@ jobs:
             ARGS+=(--skip-publish)
           fi
           python scripts/run_weekly_pulse.py "${ARGS[@]}"
+
+      - name: Commit pulse history for dashboard
+        if: success()
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Only dashboard-facing files (tracked via .gitignore exceptions)
+          git add \
+            data/artifacts/pulse.json \
+            data/artifacts/pulse.md \
+            data/artifacts/history/ \
+            data/state/doc_registry.json || true
+
+          if git diff --cached --quiet; then
+            echo "No pulse history changes to commit"
+            exit 0
+          fi
+
+          WEEK=$(python -c "import json; print(json.load(open('data/artifacts/pulse.json'))['week_ending'])" 2>/dev/null || echo "unknown")
+          git commit -m "Archive weekly pulse ${WEEK} for dashboard"
+          # Rebase if main moved; avoid force-push
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+          echo "Pushed pulse history — Railway should redeploy with week ${WEEK}"
 
       - name: Upload artifacts
         if: always()
