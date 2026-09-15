@@ -65,10 +65,29 @@ def _build_theme_list(seeds: Sequence[Any]) -> str:
     return "\n".join(lines)
 
 
-def _reviews_to_json(reviews: Sequence[Review]) -> str:
-    """Serialize reviews for the prompt (id + text only — no PII columns)."""
-    rows = [{"review_id": r.id, "text": r.text, "rating": r.rating} for r in reviews]
-    return json.dumps(rows, indent=2)
+def _truncate(text: str, max_chars: int) -> str:
+    text = text.strip()
+    if len(text) <= max_chars:
+        return text
+    return text[: max_chars - 1].rstrip() + "…"
+
+
+def _reviews_to_json(
+    reviews: Sequence[Review], *, max_chars: int = 160
+) -> str:
+    """Serialize reviews for the prompt (id + text only — no PII columns).
+
+    Compact JSON + truncated text keeps each batch under Groq 8K TPM / 200K TPD.
+    """
+    rows = [
+        {
+            "review_id": r.id,
+            "text": _truncate(r.text, max_chars),
+            "rating": r.rating,
+        }
+        for r in reviews
+    ]
+    return json.dumps(rows, separators=(",", ":"))
 
 
 def cluster_reviews(
@@ -95,9 +114,12 @@ def cluster_reviews(
 
     assignments: dict[str, ReviewAssignment] = {}
 
+    max_chars = app.limits.cluster_review_max_chars
+    rate_limit_retries = app.limits.llm_rate_limit_retries
+
     for start in range(0, len(reviews), batch_size):
         batch = reviews[start : start + batch_size]
-        reviews_json = _reviews_to_json(batch)
+        reviews_json = _reviews_to_json(batch, max_chars=max_chars)
 
         prompt_text = prompt_template.replace("{theme_list}", theme_list_str).replace(
             "{reviews_json}", reviews_json
@@ -121,6 +143,7 @@ def cluster_reviews(
                     ClusterBatchOutput,
                     messages,
                     min_interval_seconds=app.limits.llm_request_interval_seconds,
+                    rate_limit_retries=rate_limit_retries,
                 )
                 for a in parsed.assignments:
                     tid = a.theme_id if a.theme_id in all_valid_ids else "other"
@@ -185,7 +208,10 @@ def _build_themes(
 
     themes: list[Theme] = []
     for tid, rids in theme_reviews.items():
-        label = seed_map.get(tid, tid.replace("_", " ").title())
+        if tid == "other":
+            label = "Unclassified"
+        else:
+            label = seed_map.get(tid, tid.replace("_", " ").title())
         themes.append(Theme(id=tid, label=label, review_ids=rids))
 
     return themes
@@ -212,7 +238,10 @@ def _split_other_pass(
         "that covers the largest group. Return structured JSON with "
         "new_theme_id, new_theme_label, and reassignments "
         "(review_id, theme_id, confidence).\n\n"
-        "Reviews:\n" + _reviews_to_json(other_reviews[:50])
+        "Reviews:\n"
+        + _reviews_to_json(
+            other_reviews[:50], max_chars=app.limits.cluster_review_max_chars
+        )
     )
 
     try:
@@ -224,6 +253,7 @@ def _split_other_pass(
                 HumanMessage(content=split_prompt),
             ],
             min_interval_seconds=app.limits.llm_request_interval_seconds,
+            rate_limit_retries=app.limits.llm_rate_limit_retries,
         )
         new_id = parsed.new_theme_id.strip().lower().replace(" ", "_")
         new_label = parsed.new_theme_label or new_id.replace("_", " ").title()
@@ -261,7 +291,7 @@ def _merge_to_five(themes: list[Theme]) -> list[Theme]:
         non_other.remove(smallest)
 
         if other is None:
-            other = Theme(id="other", label="Other", review_ids=[])
+            other = Theme(id="other", label="Unclassified", review_ids=[])
 
         other = other.model_copy(
             update={"review_ids": other.review_ids + smallest.review_ids}

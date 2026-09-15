@@ -52,8 +52,12 @@ class LimitsConfig(BaseModel):
     cluster_batch_size: int = Field(ge=1)
     cluster_max_attempts: int = Field(ge=1)
     generate_max_attempts: int = Field(ge=1)
-    # Groq free tier: ~30 RPM → default 2.5s between calls
-    llm_request_interval_seconds: float = Field(default=2.5, ge=0)
+    # Groq free tier: 30 RPM / 8K TPM → default ≥2s; 8s leaves TPM headroom
+    llm_request_interval_seconds: float = Field(default=8.0, ge=0)
+    # Truncate review bodies in cluster prompts (8K TPM / 200K TPD)
+    cluster_review_max_chars: int = Field(default=160, ge=40)
+    # Extra waits when Groq returns 429 (does not count as infinite burn)
+    llm_rate_limit_retries: int = Field(default=6, ge=0)
 
 
 class ScheduleConfig(BaseModel):

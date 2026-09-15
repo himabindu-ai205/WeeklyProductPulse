@@ -156,6 +156,7 @@ def generate_pulse(
         PulseLLMOutput,
         messages,
         min_interval_seconds=app.limits.llm_request_interval_seconds,
+        rate_limit_retries=app.limits.llm_rate_limit_retries,
     )
 
     pulse = _assemble_pulse(

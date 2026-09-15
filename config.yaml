@@ -3,7 +3,8 @@ package_id: "com.nextbillion.groww"
 play_store_url: "https://play.google.com/store/apps/details?id=com.nextbillion.groww&hl=en_IN"
 
 windows:
-  corpus_weeks: 12
+  # Keep corpus smaller so a full weekly run stays under ~200K tokens/day
+  corpus_weeks: 8
   reporting_days: 7
   min_week_reviews: 15          # below this, roll up to 4 weeks
   fallback_days: 28
@@ -34,12 +35,16 @@ delivery:
   email_body_mode: "full_note_plus_link"   # full_note_plus_link | link_only
 
 limits:
-  # Smaller batches stay under Groq free-tier ~8K tokens/minute
-  cluster_batch_size: 10
+  # Groq free-tier budgets we target:
+  #   30 requests/min · 1K requests/day · 8K tokens/min · 200K tokens/day
+  cluster_batch_size: 5            # smaller prompts → stay under 8K TPM
   cluster_max_attempts: 2
   generate_max_attempts: 3
-  # ~30 requests/minute → 2.5s gap between LLM calls
-  llm_request_interval_seconds: 2.5
+  # ≤30 RPM (60/30=2s); 8s also leaves headroom for 8K TPM
+  llm_request_interval_seconds: 8
+  # Truncate review text in cluster prompts (TPM / TPD)
+  cluster_review_max_chars: 160
+  llm_rate_limit_retries: 6
 
 # Phase 7 — weekly ops (GitHub Actions / Task Scheduler / cron)
 schedule:
@@ -49,5 +54,5 @@ schedule:
   timezone: Asia/Kolkata
   fetch_before_run: true
   export_path: data/exports/groww_play_reviews.csv
-  scrape_count: 2000               # enough for ~8–12 weeks without a 10k scrape
+  scrape_count: 1200               # matches ~8-week corpus; protects 200K TPD
   once_per_week: true              # skip Docs/Gmail if this week_ending already published
